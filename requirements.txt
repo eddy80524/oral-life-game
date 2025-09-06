@@ -1,0 +1,9 @@
+streamlit==1.38.0
+streamlit-webrtc==0.47.6
+opencv-python==4.10.0.84
+numpy
+pandas
+pydub
+pyyaml
+# 将来用
+pyrebase4

@@ -1,0 +1,19 @@
+{
+  "prologue": "assets/audio/prologue.mp3",
+  "checkup": "assets/audio/checkup.mp3",
+  "checkup2": "assets/audio/checkup2.mp3",
+  "tea_advice": "assets/audio/tea_advice.mp3",
+  "floss": "assets/audio/floss.mp3",
+  "veggie_talk": "assets/audio/veggie_talk.mp3",
+  "job": "assets/audio/job.mp3",
+  "smile": "assets/audio/smile.mp3",
+  "goal": "assets/audio/goal.mp3",
+  "caries_explain_01": "assets/audio/caries_explain_01.mp3",
+  "caries_explain_02": "assets/audio/caries_explain_02.mp3",
+  "caries_explain_01_jr": "assets/audio/caries_explain_01_jr.mp3",
+  "caries_explain_02_jr": "assets/audio/caries_explain_02_jr.mp3",
+  "perio_explain_01": "assets/audio/perio_explain_01.mp3",
+  "perio_explain_02": "assets/audio/perio_explain_02.mp3",
+  "perio_explain_01_jr": "assets/audio/perio_explain_01_jr.mp3",
+  "perio_explain_02_jr": "assets/audio/perio_explain_02_jr.mp3"
+}

@@ -1,0 +1,129 @@
+{
+  "sets": {
+    "kids": {
+      "caries": [
+        {
+          "id": "caries_q1",
+          "type": "single",
+          "text": "体の中で1番硬いのはどこ？",
+          "choices": ["頭", "背中", "歯"],
+          "answer": 2,
+          "explain": "歯は体の中で一番硬い部分です。エナメル質という硬い組織でできています。",
+          "image": "images/teeth_hardest.jpg",
+          "audio_id": "caries_explain_01",
+          "reward": {"tooth": 3, "teeth": 0},
+          "penalty": {"tooth": -2, "teeth": 0}
+        },
+        {
+          "id": "caries_q2",
+          "type": "combination",
+          "text": "虫歯になりやすい組み合わせを選んでね",
+          "food_choices": [
+            {"name": "菓子パン", "image": "images/bread.jpg", "caries_risk": true},
+            {"name": "チョコバナナ", "image": "images/choco_banana.jpg", "caries_risk": true},
+            {"name": "キシリトール入りガム", "image": "images/xylitol_gum.jpg", "caries_risk": false},
+            {"name": "チーズ", "image": "images/cheese.jpg", "caries_risk": false}
+          ],
+          "drink_choices": [
+            {"name": "お茶", "image": "images/tea.jpg", "caries_risk": false},
+            {"name": "コーラ", "image": "images/cola.jpg", "caries_risk": true},
+            {"name": "オレンジジュース", "image": "images/orange_juice.jpg", "caries_risk": true},
+            {"name": "ブラックコーヒー", "image": "images/black_coffee.jpg", "caries_risk": false},
+            {"name": "牛乳", "image": "images/milk.jpg", "caries_risk": false}
+          ],
+          "correct_combination": {
+            "food": ["菓子パン", "チョコバナナ"],
+            "drink": ["コーラ", "オレンジジュース"]
+          },
+          "explain": "菓子パンやチョコバナナは糖分が多く、コーラやオレンジジュースも糖分が多いので、この組み合わせは虫歯になりやすいです。",
+          "image": "images/food_drink_combo.jpg",
+          "audio_id": "caries_explain_02",
+          "reward": {"tooth": 3, "teeth": 0},
+          "penalty": {"tooth": -2, "teeth": 0}
+        }
+      ],
+      "perio": [
+        {
+          "id": "perio_q1",
+          "type": "single",
+          "text": "歯磨きしないとどこから血が出る？",
+          "choices": ["歯", "歯茎", "舌"],
+          "answer": 1,
+          "explain": "歯ぐきが炎症を起こすと血が出ます。これが歯周病の始まりです。",
+          "image": "images/gum_bleeding.jpg",
+          "audio_id": "perio_explain_01",
+          "reward": {"tooth": 5, "teeth": 0},
+          "penalty": {"tooth": -2, "teeth": -1}
+        },
+        {
+          "id": "perio_q2",
+          "type": "single",
+          "text": "歯の根っこのところはどうなっている？",
+          "choices": ["選択肢1", "選択肢2", "正解の選択肢"],
+          "answer": 2,
+          "explain": "歯は顎の骨にしっかりと支えられています。歯周病が進むとこの骨が溶けてしまいます。",
+          "image": "images/tooth_support.jpg",
+          "audio_id": "perio_explain_02",
+          "reward": {"tooth": 5, "teeth": 0},
+          "penalty": {"tooth": -2, "teeth": -1}
+        }
+      ]
+    },
+    "junior": {
+      "caries": [
+        {
+          "id": "caries_q1_jr",
+          "type": "single",
+          "text": "人間の体で最も硬い組織はどれですか？",
+          "choices": ["骨", "歯のエナメル質", "爪", "軟骨"],
+          "answer": 1,
+          "explain": "歯のエナメル質は人体で最も硬い組織で、ダイヤモンドに近い硬さを持っています。",
+          "image": "images/enamel_structure.jpg",
+          "audio_id": "caries_explain_01_jr",
+          "reward": {"tooth": 7, "teeth": 1},
+          "penalty": {"tooth": -3, "teeth": 0}
+        },
+        {
+          "id": "caries_q2_jr",
+          "type": "multi",
+          "text": "虫歯予防に効果的な食べ物と飲み物の組み合わせを選択してください",
+          "food_choices": ["砂糖たっぷりのケーキ", "チョコレート菓子", "無糖チーズ", "キシリトール配合ガム"],
+          "drink_choices": ["緑茶", "炭酸飲料", "果汁100%ジュース", "無糖コーヒー", "低脂肪牛乳"],
+          "food_correct": [2, 3],
+          "drink_correct": [0, 3, 4],
+          "explain": "無糖のチーズや特定保健用食品のガムは歯の再石灰化を促進し、緑茶のフッ素、無糖飲料は虫歯リスクを下げます。",
+          "image": "images/healthy_food_jr.jpg",
+          "audio_id": "caries_explain_02_jr",
+          "reward": {"tooth": 7, "teeth": 1},
+          "penalty": {"tooth": -4, "teeth": -1}
+        }
+      ],
+      "perio": [
+        {
+          "id": "perio_q1_jr",
+          "type": "single",
+          "text": "歯周病の初期症状として最も一般的なものは？",
+          "choices": ["歯の痛み", "歯肉からの出血", "歯の変色", "口臭"],
+          "answer": 1,
+          "explain": "歯肉炎による歯ぐきからの出血が歯周病の最初のサインです。早期発見・治療が重要です。",
+          "image": "images/gingivitis.jpg",
+          "audio_id": "perio_explain_01_jr",
+          "reward": {"tooth": 7, "teeth": 0},
+          "penalty": {"tooth": -3, "teeth": -1}
+        },
+        {
+          "id": "perio_q2_jr",
+          "type": "single",
+          "text": "歯を支える組織の中で、歯周病によって最も影響を受けるのは？",
+          "choices": ["歯髄", "象牙質", "歯槽骨", "エナメル質"],
+          "answer": 2,
+          "explain": "歯槽骨は歯を支える重要な骨組織で、歯周病が進行すると破壊されて歯が抜ける原因となります。",
+          "image": "images/alveolar_bone.jpg",
+          "audio_id": "perio_explain_02_jr",
+          "reward": {"tooth": 7, "teeth": 0},
+          "penalty": {"tooth": -3, "teeth": -1}
+        }
+      ]
+    }
+  }
+}

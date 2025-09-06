@@ -1,0 +1,254 @@
+[
+  {
+    "cell": 0,
+    "type": "start",
+    "title": "スタート",
+    "desc": "20本の歯と10トゥースを持ってゲームスタート！",
+    "initial_teeth": 20,
+    "initial_tooth": 10,
+    "audio_id": "start"
+  },
+  {
+    "cell": 1,
+    "type": "event",
+    "title": "初めて言葉を話せるようになった",
+    "desc": "自己紹介をしよう！（名前と好きなもの）",
+    "action": "self_introduction",
+    "audio_id": "first_words"
+  },
+  {
+    "cell": 2,
+    "type": "event",
+    "title": "ジャンプができるようになった",
+    "desc": "その場で3回ジャンプしよう！",
+    "action": "jump_exercise",
+    "audio_id": "jump"
+  },
+  {
+    "cell": 3,
+    "type": "event",
+    "title": "初めて乳歯が抜けた",
+    "desc": "抜けた歯はどうしたかな？",
+    "action": "tooth_loss_story",
+    "audio_id": "first_tooth_loss"
+  },
+  {
+    "cell": 4,
+    "type": "stop",
+    "title": "定期検診",
+    "desc": "歯医者さんでフッ素を塗ってもらった。3トゥースをもらう。",
+    "tooth_delta": 3,
+    "audio_id": "fluoride_treatment",
+    "next_action": "caries_quiz"
+  },
+  {
+    "cell": 5,
+    "type": "quiz",
+    "title": "虫歯クイズ",
+    "desc": "成長して全部大人の歯に生え変わった。虫歯クイズに挑戦！",
+    "quiz_type": "caries",
+    "questions": [
+      {
+        "id": 1,
+        "question": "体の中で1番硬いのはどこ？",
+        "options": ["頭", "背中", "歯"],
+        "correct": 2,
+        "audio_id": "hardest_part"
+      },
+      {
+        "id": 2,
+        "question": "虫歯になりやすい組み合わせを選んでね",
+        "type": "combination",
+        "food_options": [
+          {"name": "菓子パン", "image": "bread.jpg", "caries_risk": true},
+          {"name": "チョコバナナ", "image": "choco_banana.jpg", "caries_risk": true},
+          {"name": "キシリトール入りガム", "image": "xylitol_gum.jpg", "caries_risk": false},
+          {"name": "チーズ", "image": "cheese.jpg", "caries_risk": false}
+        ],
+        "drink_options": [
+          {"name": "お茶", "image": "tea.jpg", "caries_risk": false},
+          {"name": "コーラ", "image": "cola.jpg", "caries_risk": true},
+          {"name": "オレンジジュース", "image": "orange_juice.jpg", "caries_risk": true},
+          {"name": "ブラックコーヒー", "image": "black_coffee.jpg", "caries_risk": false},
+          {"name": "牛乳", "image": "milk.jpg", "caries_risk": false}
+        ],
+        "correct_combination": {
+          "food": ["菓子パン", "チョコバナナ"],
+          "drink": ["コーラ", "オレンジジュース"]
+        },
+        "audio_id": "caries_combination"
+      }
+    ],
+    "pass_threshold": 1,
+    "branch_fail": 6,
+    "branch_pass": 9
+  },
+  {
+    "cell": 6,
+    "type": "branch_fail",
+    "title": "虫歯ができた",
+    "desc": "歯が痛い！歯医者さんで2トゥース払って治療してもらう。",
+    "tooth_delta": -2,
+    "audio_id": "caries_treatment"
+  },
+  {
+    "cell": 7,
+    "type": "branch_fail",
+    "title": "ジュースをおねだり",
+    "desc": "お母さんにおねだりして毎日ジュースを買ってもらう。3トゥースを払う。",
+    "tooth_delta": -3,
+    "audio_id": "juice_addiction"
+  },
+  {
+    "cell": 8,
+    "type": "branch_fail",
+    "title": "夜更かし",
+    "desc": "中学生になって勉強が忙しくて夜更かし。1マス戻る。",
+    "step_delta": -1,
+    "audio_id": "late_night"
+  },
+  {
+    "cell": 9,
+    "type": "branch_pass",
+    "title": "フロスができるようになった",
+    "desc": "フロスは使っているかな？",
+    "action": "floss_check",
+    "audio_id": "floss_education"
+  },
+  {
+    "cell": 10,
+    "type": "branch_pass",
+    "title": "我慢できた",
+    "desc": "夜にお菓子が食べたくなったけど、我慢して明日のおやつに取っておいた。1トゥースもらう。",
+    "tooth_delta": 1,
+    "audio_id": "self_control"
+  },
+  {
+    "cell": 11,
+    "type": "branch_pass",
+    "title": "苦手な野菜に挑戦",
+    "desc": "苦手な野菜に挑戦して頑張って食べてみた。苦手な野菜はあるかな？",
+    "action": "vegetable_challenge",
+    "audio_id": "vegetable_challenge"
+  },
+  {
+    "cell": 12,
+    "type": "merge",
+    "title": "バイクで大事故",
+    "desc": "前歯が2本折れてしまった。歯を2本失い、2トゥース払う。",
+    "teeth_delta": -2,
+    "tooth_delta": -2,
+    "audio_id": "accident"
+  },
+  {
+    "cell": 13,
+    "type": "job_experience",
+    "title": "お仕事体験",
+    "desc": "職業体験に参加する。体験が終わったら5トゥースもらう。",
+    "jobs": [
+      {"id": 1, "name": "歯科医師", "description": "歯の治療をする医師", "experience": "diagnosis"},
+      {"id": 2, "name": "歯科衛生士", "description": "口の中をきれいにする専門家", "experience": "cleaning"},
+      {"id": 3, "name": "歯科技工士", "description": "入れ歯や被せ物を作る職人", "experience": "crafting"}
+    ],
+    "tooth_delta": 5,
+    "audio_id": "job_experience"
+  },
+  {
+    "cell": 14,
+    "type": "event",
+    "title": "野菜ジュース開発",
+    "desc": "虫歯になりにくい野菜ジュースを考えた。5トゥースもらう。",
+    "tooth_delta": 5,
+    "audio_id": "vegetable_juice"
+  },
+  {
+    "cell": 15,
+    "type": "stop",
+    "title": "定期検診",
+    "desc": "歯医者さんでお口をきれいに掃除してもらった。3トゥースもらう。",
+    "tooth_delta": 3,
+    "audio_id": "professional_cleaning",
+    "next_action": "periodontitis_quiz"
+  },
+  {
+    "cell": 16,
+    "type": "quiz",
+    "title": "歯周病クイズ",
+    "desc": "歯周病について学ぼう！",
+    "quiz_type": "periodontitis",
+    "questions": [
+      {
+        "id": 1,
+        "question": "歯磨きしないとどこから血が出る？",
+        "options": ["歯", "歯茎", "舌"],
+        "correct": 1,
+        "audio_id": "gum_bleeding"
+      },
+      {
+        "id": 2,
+        "question": "歯の根っこのところはどうなっている？",
+        "options": ["①", "②", "③"],
+        "correct": 2,
+        "audio_id": "tooth_root"
+      }
+    ],
+    "pass_threshold": 1,
+    "branch_fail": 17,
+    "branch_pass": 20
+  },
+  {
+    "cell": 17,
+    "type": "branch_fail",
+    "title": "大人の歯がぐらぐら",
+    "desc": "歯を抜かないといけなくなった！出た目の数だけ歯を失う。サイコロの出た目×2トゥースを払う。",
+    "action": "dice_tooth_loss",
+    "audio_id": "loose_teeth"
+  },
+  {
+    "cell": 18,
+    "type": "branch_fail",
+    "title": "入れ歯作成",
+    "desc": "入れ歯を歯医者さんで作ってもらい孫と話しやすくなった。7トゥース払う。",
+    "tooth_delta": -7,
+    "audio_id": "dentures"
+  },
+  {
+    "cell": 19,
+    "type": "branch_fail",
+    "title": "茶渋除去",
+    "desc": "お茶を飲み過ぎて茶渋がいっぱいできた。歯医者に行って歯を白くしてもらった。3トゥース払う。",
+    "tooth_delta": -3,
+    "audio_id": "tea_stain_removal"
+  },
+  {
+    "cell": 20,
+    "type": "branch_pass",
+    "title": "きれいな歯茎",
+    "desc": "きれいな歯茎のおかげで自信を持って笑える。一緒に笑おう！",
+    "action": "smile_together",
+    "audio_id": "beautiful_smile"
+  },
+  {
+    "cell": 21,
+    "type": "branch_pass",
+    "title": "給料アップ",
+    "desc": "仕事でみんなから頼りにされて給料アップ！10トゥースもらう。",
+    "tooth_delta": 10,
+    "audio_id": "salary_up"
+  },
+  {
+    "cell": 22,
+    "type": "branch_pass",
+    "title": "健康な歯でおいしい食事",
+    "desc": "健康な歯のおかげで何でもおいしく食べられる！5トゥースもらう。",
+    "tooth_delta": 5,
+    "audio_id": "healthy_eating"
+  },
+  {
+    "cell": 23,
+    "type": "goal",
+    "title": "ゴール！",
+    "desc": "お疲れ様でした！最終結果を確認しましょう。",
+    "audio_id": "final_goal"
+  }
+]

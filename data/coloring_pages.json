@@ -1,0 +1,44 @@
+{
+  "kids": [
+    {
+      "title": "歯みがき ぬりえ",
+      "description": "楽しく歯みがきするぬりえです",
+      "file_url": "assets/coloring/brushing_teeth_kids.pdf",
+      "age_group": "5-8"
+    },
+    {
+      "title": "歯の なまえ ぬりえ",
+      "description": "歯の名前を覚えるぬりえです",
+      "file_url": "assets/coloring/tooth_names_kids.pdf",
+      "age_group": "5-8"
+    }
+  ],
+  "junior": [
+    {
+      "title": "歯の構造 ぬりえ",
+      "description": "歯の詳しい構造を学ぶぬりえです",
+      "file_url": "assets/coloring/tooth_structure_junior.pdf",
+      "age_group": "9-12"
+    },
+    {
+      "title": "オーラルケア クロスワード",
+      "description": "歯の健康に関するクロスワードパズルです",
+      "file_url": "assets/coloring/oral_crossword_junior.pdf",
+      "age_group": "9-12"
+    }
+  ],
+  "mini_quiz": [
+    {
+      "question": "歯みがきは1日何回するのがいい？",
+      "choices": ["1回", "2回", "3回", "4回"],
+      "answer": 2,
+      "explanation": "朝・昼・夜の3回歯みがきをすると歯を健康に保てます。"
+    },
+    {
+      "question": "甘いものを食べた後は？",
+      "choices": ["そのままでいい", "水でうがい", "歯みがき", "ガムを噛む"],
+      "answer": 2,
+      "explanation": "甘いものを食べた後は歯みがきをして虫歯を予防しましょう。"
+    }
+  ]
+}

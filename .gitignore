@@ -58,3 +58,7 @@ Thumbs.db
 *.bak
 *.backup
 *_backup.*
+fix_*.py
+
+# Development temp files
+pages_backup/

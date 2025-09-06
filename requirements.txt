@@ -1,9 +1,11 @@
 streamlit>=1.39.0
-streamlit-webrtc==0.47.6
-opencv-python==4.10.0.84
 numpy
 pandas
-pydub
 pyyaml
-# 将来用
-pyrebase4
+
+# 将来の音声機能用（現在は未使用）
+# pydub
+# gTTS
+
+# 将来のクラウド保存用（現在は未使用）
+# pyrebase4

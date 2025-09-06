@@ -51,13 +51,25 @@ def display_image(category, filename, caption=None, width=None, use_container_wi
         # widthが指定されている場合はuse_container_widthをFalseにする
         if width is not None:
             use_container_width = False
-            
-        st.image(
-            str(image_path), 
-            caption=caption, 
-            width=width,
-            use_container_width=use_container_width
-        )
+        
+        # Streamlitのバージョン互換性のためのパラメータ処理
+        import streamlit as st
+        try:
+            # 新しいStreamlitバージョンでuse_container_widthを試す
+            st.image(
+                str(image_path), 
+                caption=caption, 
+                width=width,
+                use_container_width=use_container_width
+            )
+        except TypeError:
+            # 古いStreamlitバージョンではuse_column_widthを使用
+            st.image(
+                str(image_path), 
+                caption=caption, 
+                width=width,
+                use_column_width=use_container_width
+            )
         return True
     else:
         # 画像が見つからない場合は代替表示

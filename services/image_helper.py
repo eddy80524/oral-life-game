@@ -23,6 +23,8 @@ def get_image_path(category, filename):
         return base_path / "events" / filename
     elif category == "checkup":
         return base_path / "checkup" / filename
+    elif category == "reception" or category == "intro":
+        return base_path / "reception" / filename
     else:
         return base_path / filename
 

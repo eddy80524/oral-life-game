@@ -558,11 +558,19 @@ def show_reception_page():
     central_col = st.columns([0.08, 0.84, 0.08])[1]
 
     def render_reception_image(basename: str) -> None:
+        if basename in {"name_prompt", "age_prompt"}:
+            return
         image_path = find_image_file("reception", basename)
         if image_path and image_path.exists():
-            st.image(str(image_path), use_column_width=True)
+            try:
+                st.image(str(image_path), width='stretch')
+            except TypeError:
+                st.image(str(image_path), use_column_width=True)
         elif basename == "cover":
-            if not display_image("board", "okuchi_game", "おくちの人生ゲーム", use_container_width=True):
+            if not display_image("board", "okuchi_game", "おくちの人生ゲーム", fill='stretch'):
+                st.markdown("<div class='reception-photo-slot'>ここに画像や動画をいれてね</div>", unsafe_allow_html=True)
+        elif basename == "welcome_teeth":
+            if not display_image("board", "welcome_teeth", "ウェルカムボード", fill='stretch'):
                 st.markdown("<div class='reception-photo-slot'>ここに画像や動画をいれてね</div>", unsafe_allow_html=True)
         else:
             st.markdown("<div class='reception-photo-slot'>ここに画像や動画をいれてね</div>", unsafe_allow_html=True)
@@ -579,13 +587,13 @@ def show_reception_page():
         if step == 0:
             render_reception_image("cover")
             st.markdown("<div style='height:2vh'></div>", unsafe_allow_html=True)
-            if st.button("すすむ", key="reception_next_cover", use_container_width=True, type="primary"):
+            if st.button("すすむ", key="reception_next_cover", width='stretch', type="primary"):
                 st.session_state.reception_step = 1
                 st.rerun()
 
         elif step == 1:
-            render_reception_image("welcome_teeth")
             st.markdown("<h1 class='reception-heading'>おくちのじんせいゲームへようこそ！</h1>", unsafe_allow_html=True)
+            render_reception_image("welcome_teeth")
             st.markdown("<p class='reception-text'>みんなには100さいになるまで<br>きれいなおくちですごしてもらうよ！</p>", unsafe_allow_html=True)
             audio_cols = st.columns([0.25, 0.5, 0.25])
             with audio_cols[2]:
@@ -594,7 +602,7 @@ def show_reception_page():
             if st.session_state.reception_audio_prompt:
                 st.info("音声ガイドは準備中だよ！")
             st.markdown("<div style='height:1vh'></div>", unsafe_allow_html=True)
-            if st.button("すすむ", key="reception_next_welcome", use_container_width=True, type="primary"):
+            if st.button("すすむ", key="reception_next_welcome", width='stretch', type="primary"):
                 st.session_state.reception_step = 2
                 st.rerun()
 
@@ -602,12 +610,13 @@ def show_reception_page():
             render_reception_image("name_prompt")
             st.markdown("<h1 class='reception-heading'>きみのなまえを<br>おしえて！</h1>", unsafe_allow_html=True)
             name_input = st.text_input(
-                "",
+                "ニックネーム",
                 value=st.session_state.participant_name,
                 placeholder="ニックネームを入力してね",
-                key="reception_name_input"
+                key="reception_name_input",
+                label_visibility="collapsed"
             )
-            if st.button("すすむ", key="reception_next_name", use_container_width=True, type="primary"):
+            if st.button("すすむ", key="reception_next_name", width='stretch', type="primary"):
                 if not name_input.strip():
                     st.warning("なまえをいれてね！")
                 else:
@@ -624,14 +633,14 @@ def show_reception_page():
                 default_label = "5さい"
             age_index = age_options.index(default_label)
             selected_label = st.selectbox(
-                "",
+                "なんさいかな？",
                 age_options,
                 index=age_index,
                 key="reception_age_select",
                 label_visibility="collapsed"
             )
             st.session_state.reception_age_label = selected_label
-            if st.button("すすむ", key="reception_next_age", use_container_width=True, type="primary"):
+            if st.button("すすむ", key="reception_next_age", width='stretch', type="primary"):
                 if selected_label == "11さい以上":
                     participant_age = 11
                 else:
@@ -642,13 +651,9 @@ def show_reception_page():
                 st.rerun()
 
         elif step == 4:
-            render_reception_image("wait")
             st.markdown("<h1 class='reception-heading'>まっていてね！</h1>", unsafe_allow_html=True)
-            st.markdown(
-                "<div class='wait-note'>絵本がめくれるような形だと理想かも<br>もしくは読み聞かせ動画が流れているとか</div>",
-                unsafe_allow_html=True
-            )
-            if st.button("すすむ", key="reception_start_game", use_container_width=True, type="primary"):
+            render_reception_image("wait")
+            if st.button("すすむ", key="reception_start_game", width='stretch', type="primary"):
                 update_participant_count()
                 st.session_state.reception_step = 0
                 st.session_state.game_board_stage = 'card'
@@ -692,11 +697,28 @@ def show_game_board_page():
     if stage not in {'card', 'roulette'}:
         stage = st.session_state.game_board_stage = 'card'
 
+    def compute_allowed_numbers(position: int):
+        forced_stop_positions = [4, 13, 15]
+        distance_to_goal = max(0, max_position_index - position)
+        max_spin = 3
+        max_reachable = min(max_spin, distance_to_goal if distance_to_goal > 0 else max_spin)
+        if max_reachable <= 0:
+            return [], None, distance_to_goal
+        next_stop_distance = None
+        for stop_pos in forced_stop_positions:
+            if stop_pos > position:
+                next_stop_distance = stop_pos - position
+                break
+        allowed = list(range(1, max_reachable + 1))
+        if next_stop_distance is not None and next_stop_distance <= max_spin:
+            allowed = list(range(1, min(max_reachable, next_stop_distance) + 1))
+        return allowed, next_stop_distance, distance_to_goal
+
     def render_cell_media(position: int, cell_info: dict) -> None:
         try:
             from services.image_helper import display_image
             cell_image_name = f"cell_{position + 1:02d}"
-            if not display_image("board", cell_image_name, cell_info.get('title', ''), use_container_width=True):
+            if not display_image("board", cell_image_name, cell_info.get('title', ''), fill='stretch'):
                 action_name = cell_info.get('action')
                 action_to_image = {
                     'self_introduction': 'self_introduction',
@@ -705,7 +727,7 @@ def show_game_board_page():
                     'job_experience': 'job_experience'
                 }
                 if action_name in action_to_image:
-                    display_image("events", action_to_image[action_name], cell_info.get('title', ''), use_container_width=True)
+                    display_image("events", action_to_image[action_name], cell_info.get('title', ''), fill='stretch')
         except ImportError:
             pass
 
@@ -819,9 +841,6 @@ def show_game_board_page():
                 return
 
             render_cell_media(current_position, current_cell)
-            st.markdown(f"<p class='reception-caption'>マス {current_position + 1}</p>", unsafe_allow_html=True)
-            if current_cell.get('desc'):
-                st.markdown(f"<h2 style='text-align:center;'>{current_cell['desc']}</h2>")
 
             cell_type = current_cell.get('type', 'normal')
             title = current_cell.get('title', '')
@@ -830,20 +849,20 @@ def show_game_board_page():
             if cell_type == 'quiz':
                 quiz_type = current_cell.get('quiz_type', '')
                 if quiz_type == 'caries':
-                    if st.button("🦷 むしばクイズにちょうせん！", use_container_width=True, type="primary"):
+                    if st.button("🦷 むしばクイズにちょうせん！", width='stretch', type="primary"):
                         navigate_to('caries_quiz')
                         action_taken = True
                 elif quiz_type == 'periodontitis':
-                    if st.button("🦷 はぐきのクイズにちょうせん！", use_container_width=True, type="primary"):
+                    if st.button("🦷 はぐきのクイズにちょうせん！", width='stretch', type="primary"):
                         navigate_to('perio_quiz')
                         action_taken = True
             elif cell_type == 'stop' or '検診' in title:
-                if st.button("🏥 はいしゃさんにいく", use_container_width=True, type="primary"):
+                if st.button("🏥 はいしゃさんにいく", width='stretch', type="primary"):
                     navigate_to('checkup')
                     action_taken = True
             elif '職業' in title:
                 if st.session_state.participant_age >= 5:
-                    if st.button("👩‍⚕️ おしごとたいけんをする", use_container_width=True, type="primary"):
+                    if st.button("👩‍⚕️ おしごとたいけんをする", width='stretch', type="primary"):
                         navigate_to('job_experience')
                         action_taken = True
                 else:
@@ -856,7 +875,7 @@ def show_game_board_page():
                     '初めて乳歯が抜けた': '🦷 はのおはなしをする'
                 }
                 if title in event_button_text:
-                    if st.button(event_button_text[title], use_container_width=True, type='secondary', key=f'event_action_{current_position}'):
+                    if st.button(event_button_text[title], width='stretch', type='secondary', key=f'event_action_{current_position}'):
                         st.success('たのしい たいけんでした！')
                         st.balloons()
 
@@ -865,67 +884,61 @@ def show_game_board_page():
                         and current_position < max_position_index)
 
             if can_spin:
-                st.markdown("<div style='height:2vh'></div>", unsafe_allow_html=True)
-                if st.button("🎡 ルーレットをまわす", key="board_to_roulette", use_container_width=True, type="primary"):
-                    st.session_state.game_board_stage = 'roulette'
-                    st.rerun()
+                allowed_numbers, _, _ = compute_allowed_numbers(current_position)
+                if not allowed_numbers:
+                    st.info("今回はすすむマスがないよ。")
+                else:
+                    st.markdown("<div style='height:1.5vh'></div>", unsafe_allow_html=True)
+                    if st.button("🎡 ルーレットをまわす", key="board_to_roulette", width='stretch', type="primary"):
+                        st.session_state.pending_spin_allowed = allowed_numbers
+                        st.session_state.roulette_spin_value = None
+                        st.session_state.game_board_stage = 'roulette'
+                        st.session_state.pop('roulette_recent_feedback', None)
+                        st.session_state.pop('roulette_last_spin_id', None)
+                        st.rerun()
             elif not action_taken and current_position >= max_position_index:
-                if st.button("🏁 ゴールへ", use_container_width=True, type="primary"):
+                if st.button("🏁 ゴールへ", width='stretch', type="primary"):
                     navigate_to('goal')
 
         elif stage == 'roulette':
-            st.markdown("<h1 style='text-align:center;'>ゲームスタート！</h1>", unsafe_allow_html=True)
-            st.markdown(
-                """
-                <div style='width:100%;max-width:360px;margin:0 auto 1.5rem;'>
-                    <div style='height:18px;border-radius:999px;background:#cfe0b5;'>
-                        <div style='width:35%;height:100%;border-radius:999px;background:#6aa06f;'></div>
-                    </div>
-                </div>
-                """,
-                unsafe_allow_html=True
-            )
-
-            forced_stop_positions = [4, 13, 15]
-            distance_to_goal = max(0, max_position_index - current_position)
-            next_stop_distance = None
-            for stop_pos in forced_stop_positions:
-                if stop_pos > current_position:
-                    next_stop_distance = stop_pos - current_position
-                    break
-
-            max_spin = 3
-            max_reachable = min(max_spin, distance_to_goal if distance_to_goal > 0 else max_spin)
-            allowed_numbers = list(range(1, max_reachable + 1))
-            if next_stop_distance is not None and next_stop_distance <= max_spin:
-                allowed_numbers = list(range(1, min(max_reachable, next_stop_distance) + 1))
+            allowed_numbers = st.session_state.get('pending_spin_allowed', [])
 
             if not allowed_numbers:
-                st.info("すすむマスはないよ。マスに戻るね。")
                 st.session_state.game_board_stage = 'card'
                 st.rerun()
-            else:
+
+            spin_value = st.session_state.get('roulette_spin_value')
+
+            if spin_value is None:
                 spinner_html = ROULETTE_HTML_TEMPLATE.replace("__ALLOWED__", json.dumps(allowed_numbers))
-                component_value = components.html(spinner_html, height=520, scrolling=False)
+                component_value = components.html(spinner_html, height=460, scrolling=False)
+
                 if isinstance(component_value, dict):
                     spin_id = component_value.get("spinId")
                     result_value = component_value.get("value")
-                    if spin_id is not None and result_value is not None:
+                    if result_value is not None:
                         last_spin_id = st.session_state.get('roulette_last_spin_id')
                         if last_spin_id != spin_id:
+                            st.session_state.roulette_last_spin_id = spin_id
                             try:
                                 value_int = int(result_value)
                             except ValueError:
                                 value_int = int(float(result_value))
-                            feedback = process_spin_result(value_int)
-                            st.session_state.roulette_last_spin_id = spin_id
-                            st.session_state.roulette_recent_feedback = feedback
-                            st.session_state.game_board_stage = 'card'
-                            next_page = feedback.get('next_page')
-                            if next_page and next_page != 'refresh':
-                                navigate_to(next_page)
-                            else:
-                                st.rerun()
+                            st.session_state.roulette_spin_value = value_int
+                            st.rerun()
+            else:
+                st.success(f"「{spin_value}」が 出たよ！")
+                if st.button(f"{spin_value}マス すすむ", key="roulette_apply", width='stretch', type="primary"):
+                    feedback = process_spin_result(spin_value)
+                    st.session_state.roulette_recent_feedback = feedback
+                    st.session_state.pending_spin_allowed = []
+                    st.session_state.roulette_spin_value = None
+                    st.session_state.game_board_stage = 'card'
+                    next_page = feedback.get('next_page')
+                    if next_page and next_page != 'refresh':
+                        navigate_to(next_page)
+                    else:
+                        st.rerun()
 
     st.markdown("<div style='height:4vh'></div>", unsafe_allow_html=True)
 
@@ -961,7 +974,7 @@ def show_caries_quiz_page():
     
     # 問題2: 食べ物と飲み物の組み合わせを画像で表示
     st.markdown("---")
-    st.markdown("**もんだい2: むしばになりにくい たべものは？**")
+    st.markdown("**もんだい2: むしばになりやすい くみあわせは？**")
     try:
         from services.image_helper import display_image
         display_image("quiz/caries", "question_2", "問題2の画像")
@@ -970,45 +983,40 @@ def show_caries_quiz_page():
     
     # 食べ物と飲み物の組み合わせ選択肢を画像で表示
     st.markdown("**えらんでね：**")
-    
-    col1, col2, col3 = st.columns(3)
-    
-    # 選択肢1: チョコバナナ+コーラ
-    with col1:
-        st.markdown("**せんたくし1**")
-        try:
-            from services.image_helper import display_image
-            display_image("quiz/caries/food", "choco_banana", "チョコバナナ")
-            st.markdown("**＋**")
-            display_image("quiz/caries/drink", "cola", "コーラ")
-        except ImportError:
-            st.markdown("チョコバナナ + コーラ")
-    
-    # 選択肢2: チーズ+おちゃ
-    with col2:
-        st.markdown("**せんたくし2**")
-        try:
-            from services.image_helper import display_image
-            display_image("quiz/caries/food", "cheese", "チーズ")
-            st.markdown("**＋**")
-            display_image("quiz/caries/drink", "tea", "おちゃ")
-        except ImportError:
-            st.markdown("チーズ + おちゃ")
-    
-    # 選択肢3: パン+ミルク
-    with col3:
-        st.markdown("**せんたくし3**")
-        try:
-            from services.image_helper import display_image
-            display_image("quiz/caries/food", "bread", "パン")
-            st.markdown("**＋**")
-            display_image("quiz/caries/drink", "milk", "ミルク")
-        except ImportError:
-            st.markdown("パン + ミルク")
-    
+
+    try:
+        from services.image_helper import display_image
+        option_cols = st.columns(3)
+        option_meta = [
+            ("choco_banana", "cola", "せんたくし1"),
+            ("cheese", "tea", "せんたくし2"),
+            ("bread", "milk", "せんたくし3"),
+        ]
+        for idx, (food, drink, label) in enumerate(option_meta):
+            with option_cols[idx]:
+                st.markdown(f"**{label}**")
+                food_col, drink_col = st.columns(2)
+                with food_col:
+                    display_image("quiz/caries/food", food, food)
+                with drink_col:
+                    display_image("quiz/caries/drink", drink, drink)
+    except ImportError:
+        st.warning("画像を表示できませんでした。")
+
     # 選択肢のラジオボタン
-    question2_options = ["せんたくし1 (チョコバナナ+コーラ)", "せんたくし2 (チーズ+おちゃ)", "せんたくし3 (パン+ミルク)"]
+    question2_options = [
+        "せんたくし1 (チョコバナナ+コーラ)",
+        "せんたくし2 (チーズ+おちゃ)",
+        "せんたくし3 (パン+ミルク)"
+    ]
     answer2 = st.radio("こたえをえらんでね2", question2_options, key="quiz_1")
+
+    if answer2:
+        selected_index = question2_options.index(answer2)
+        if selected_index == 0:
+            st.success("✅ それはむしばになりやすい くみあわせだよ。きをつけようね！")
+        else:
+            st.warning("❌ それはむしばになりにくい くみあわせだよ。")
     
     if len(st.session_state.quiz_answers) <= 1:
         st.session_state.quiz_answers.append(None)
@@ -1016,9 +1024,9 @@ def show_caries_quiz_page():
     
     # 答え合わせボタン
     st.markdown("---")
-    if st.button("📝 こたえかんりょう", use_container_width=True, type="primary"):
-        # 正解: 問題1は「は」(index 2), 問題2は「チーズ+おちゃ」(index 1)
-        correct_answers = [2, 1]  # 問題1の正解: は(index 2), 問題2の正解: チーズ+おちゃ(index 1)
+    if st.button("📝 こたえかんりょう", width='stretch', type="primary"):
+        # 正解: 問題1は「は」(index 2), 問題2は「チョコバナナ+コーラ」(index 0)
+        correct_answers = [2, 0]
         
         correct_count = sum(1 for i, correct_answer in enumerate(correct_answers) 
                           if len(st.session_state.quiz_answers) > i and st.session_state.quiz_answers[i] == correct_answer)
@@ -1029,21 +1037,21 @@ def show_caries_quiz_page():
         try:
             from services.image_helper import display_image
             if correct_count >= 1:
-                st.markdown("### 🌟 むしばにならないルート！")
-                st.info("けんこうてきなえらびかたをしよう！")
-                col1, col2 = st.columns(2)
-                with col1:
-                    display_image("quiz/caries/food", "cheese", "チーズ（けんこうてき）")
-                with col2:
-                    display_image("quiz/caries/drink", "tea", "おちゃ（けんこうてき）")
-            else:
-                st.markdown("### 💧 むしばになるルート...")
-                st.warning("きをつけよう！これらはむしばになりやすいよ")
+                st.markdown("### 🌟 むしばになりやすい くみあわせを みつけられたね！")
+                st.warning("これは むしばになりやすいので きをつけよう！")
                 col1, col2 = st.columns(2)
                 with col1:
                     display_image("quiz/caries/food", "choco_banana", "チョコバナナ（むしばになりやすい）")
                 with col2:
                     display_image("quiz/caries/drink", "cola", "コーラ（むしばになりやすい）")
+            else:
+                st.markdown("### 💧 これは むしばになりにくいよ")
+                st.info("おやつやのみものの えらびかたを かんがえてみよう！")
+                col1, col2 = st.columns(2)
+                with col1:
+                    display_image("quiz/caries/food", "cheese", "チーズ（むしばになりにくい）")
+                with col2:
+                    display_image("quiz/caries/drink", "tea", "おちゃ（むしばになりにくい）")
         except ImportError:
             pass
         
@@ -1053,13 +1061,11 @@ def show_caries_quiz_page():
             old_coins = game_state.get('tooth_coins', 0)
             
             if correct_count >= 1:
-                # 成功ルート: セル9へ
                 game_state['tooth_coins'] += 5
                 game_state['current_position'] = 9
-                show_coin_change(old_coins, game_state['tooth_coins'], "むしばクイズ せいかい！ けんこうルートへ")
+                show_coin_change(old_coins, game_state['tooth_coins'], "むしばクイズ せいかい！ きをつけられたね")
                 st.success("🌟 よくできました！ けんこうルートに すすみます！")
             else:
-                # 失敗ルート: セル6へ
                 game_state['tooth_coins'] = max(0, game_state['tooth_coins'] - 3)
                 game_state['current_position'] = 6
                 show_coin_change(old_coins, game_state['tooth_coins'], "むしばクイズ ふせいかい... きをつけよう")
@@ -1080,7 +1086,7 @@ def show_job_experience_page():
     if st.session_state.selected_job is None:
         st.markdown("くじをひいて おしごとをきめよう！")
         
-        if st.button("🎯 くじをひく", use_container_width=True, type="primary"):
+        if st.button("🎯 くじをひく", width='stretch', type="primary"):
             import random
             job_index = random.randint(0, 2)
             st.session_state.selected_job = jobs[job_index]
@@ -1090,7 +1096,7 @@ def show_job_experience_page():
         st.info(f"たいけんするおしごと: {st.session_state.selected_job}")
         st.markdown("1ぷんかん たいけんをします...")
         
-        if st.button("✅ たいけんかんりょう", use_container_width=True, type="primary"):
+        if st.button("✅ たいけんかんりょう", width='stretch', type="primary"):
             # 体験完了報酬
             if 'game_state' in st.session_state:
                 game_state = st.session_state.game_state
@@ -1109,7 +1115,7 @@ def show_checkup_page():
     
     st.info("ていきけんしんで おくちのなかを チェックします！")
     
-    if st.button("🏥 けんしんをうける", use_container_width=True, type="primary"):
+    if st.button("🏥 けんしんをうける", width='stretch', type="primary"):
         # 健診報酬
         if 'game_state' in st.session_state:
             game_state = st.session_state.game_state
@@ -1233,7 +1239,7 @@ def show_perio_quiz_page():
     
     # 答え合わせボタン
     st.markdown("---")
-    if st.button("📝 こたえかんりょう", use_container_width=True, type="primary"):
+    if st.button("📝 こたえかんりょう", width='stretch', type="primary"):
         correct_count = sum(1 for i, q in enumerate(questions) 
                           if st.session_state.perio_quiz_answers[i] == q['correct'])
         
@@ -1300,7 +1306,7 @@ def show_goal_page():
     </div>
     """, unsafe_allow_html=True)
     
-    if st.button("📱 LINEページへ", use_container_width=True, type="secondary"):
+    if st.button("📱 LINEページへ", width='stretch', type="secondary"):
         navigate_to('line_coloring')
 
 def show_line_coloring_page():
@@ -1340,7 +1346,7 @@ def show_line_coloring_page():
     </p>
     """, unsafe_allow_html=True)
     
-    if st.button("🏠 さいしょからもういちど", use_container_width=True):
+    if st.button("🏠 さいしょからもういちど", width='stretch'):
         # ゲーム状態をリセット
         for key in list(st.session_state.keys()):
             if key.startswith(('game_state', 'quiz_', 'selected_job')):
@@ -1446,10 +1452,10 @@ def show_image_test_page():
     st.markdown("---")
     col1, col2 = st.columns(2)
     with col1:
-        if st.button("← スタッフ管理に戻る", use_container_width=True):
+        if st.button("← スタッフ管理に戻る", width='stretch'):
             navigate_to('staff_management')
     with col2:
-        if st.button("🏠 受付に戻る", use_container_width=True):
+        if st.button("🏠 受付に戻る", width='stretch'):
             navigate_to('reception')
 
 # メインアプリケーション
@@ -1504,7 +1510,7 @@ def main():
     if st.session_state.current_page == 'reception':
         staff_cols = st.columns([0.5, 0.5])
         with staff_cols[1]:
-            if st.button("⚙️ スタッフ管理", use_container_width=True):
+            if st.button("⚙️ スタッフ管理", width='stretch'):
                 navigate_to('staff_management')
 
 if __name__ == "__main__":

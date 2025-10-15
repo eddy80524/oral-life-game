@@ -44,34 +44,32 @@ def find_image_file(category, base_filename):
     
     return None
 
-def display_image(category, filename, caption=None, width=None, use_container_width=True):
+def display_image(category, filename, caption=None, width=None, fill='stretch'):
     """画像を表示する（複数の拡張子に対応）"""
-    # 複数の拡張子で画像を検索
     image_path = find_image_file(category, filename)
-    
+
     if image_path and os.path.exists(image_path):
-        # widthが指定されている場合はuse_container_widthをFalseにする
-        if width is not None:
-            use_container_width = False
-        
-        # Streamlitのバージョン互換性のためのパラメータ処理
-        import streamlit as st
+        display_width = width if width is not None else fill
+
         try:
-            # 新しいStreamlitバージョンでuse_container_widthを試す
             st.image(
-                str(image_path), 
-                caption=caption, 
-                width=width,
-                use_container_width=use_container_width
+                str(image_path),
+                caption=caption,
+                width=display_width,
             )
         except TypeError:
-            # 古いStreamlitバージョンではuse_column_widthを使用
-            st.image(
-                str(image_path), 
-                caption=caption, 
-                width=width,
-                use_column_width=use_container_width
-            )
+            if isinstance(display_width, str):
+                st.image(
+                    str(image_path),
+                    caption=caption,
+                    use_column_width=(display_width == 'stretch')
+                )
+            else:
+                st.image(
+                    str(image_path),
+                    caption=caption,
+                    width=display_width,
+                )
         return True
     else:
         # 画像が見つからない場合は代替表示
@@ -88,7 +86,7 @@ def display_image_grid(category, image_list, columns=3, captions=None):
     for i, filename in enumerate(image_list):
         with cols[i % columns]:
             caption = captions[i] if captions and i < len(captions) else None
-            display_image(category, filename, caption=caption, use_container_width=True)
+            display_image(category, filename, caption=caption, fill='stretch')
 
 def display_quiz_option_with_image(category, filename, option_text, key, selected_value=None):
     """クイズ選択肢を画像付きで表示"""
@@ -99,7 +97,10 @@ def display_quiz_option_with_image(category, filename, option_text, key, selecte
     
     with col1:
         if os.path.exists(image_path):
-            st.image(str(image_path), use_column_width=True)
+            try:
+                st.image(str(image_path), width='stretch')
+            except TypeError:
+                st.image(str(image_path), use_column_width=True)
         else:
             st.info("📷")
     
@@ -107,7 +108,7 @@ def display_quiz_option_with_image(category, filename, option_text, key, selecte
         # 選択状態に応じてボタンスタイルを変更
         button_type = "primary" if selected_value == option_text else "secondary"
         
-        if st.button(option_text, key=key, use_container_width=True, type=button_type):
+        if st.button(option_text, key=key, width='stretch', type=button_type):
             return option_text
     
     return None

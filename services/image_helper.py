@@ -1,9 +1,14 @@
 """
 画像表示ヘルパー関数
 """
-import streamlit as st
+import logging
 import os
 from pathlib import Path
+
+import streamlit as st
+from streamlit.errors import StreamlitAPIException
+
+logger = logging.getLogger(__name__)
 
 def get_image_path(category, filename):
     """画像パスを取得"""
@@ -44,39 +49,54 @@ def find_image_file(category, base_filename):
     
     return None
 
-def display_image(category, filename, caption=None, width=None, fill='stretch'):
-    """画像を表示する（複数の拡張子に対応）"""
+def display_image(category, filename, caption=None, width=None, fill='stretch', **kwargs):
+    """画像を表示する（複数の拡張子に対応）
+
+    fill: 'stretch' の場合はカラム幅いっぱいに表示する。
+    追加のキーワード引数は st.image にそのまま渡す。
+    """
     image_path = find_image_file(category, filename)
 
     if image_path and os.path.exists(image_path):
-        display_width = width if width is not None else fill
+        base_kwargs = dict(kwargs)
+        attempts = []
 
-        try:
-            st.image(
-                str(image_path),
-                caption=caption,
-                width=display_width,
-            )
-        except TypeError:
-            if isinstance(display_width, str):
-                st.image(
-                    str(image_path),
-                    caption=caption,
-                    use_column_width=(display_width == 'stretch')
-                )
+        if width is not None:
+            attempts.append({**base_kwargs, 'width': width})
+        else:
+            normalized_fill = fill.lower() if isinstance(fill, str) else fill
+            if isinstance(normalized_fill, str) and normalized_fill == 'stretch':
+                # 優先的に width='stretch' を試す
+                attempts.append({**base_kwargs, 'width': 'stretch'})
+                # 互換性のためのフォールバック候補
+                attempts.append({**base_kwargs, 'use_container_width': True})
+                attempts.append({**base_kwargs, 'use_column_width': True})
             else:
-                st.image(
-                    str(image_path),
-                    caption=caption,
-                    width=display_width,
-                )
+                attempts.append(base_kwargs)
+
+        last_error = None
+        for raw_kwargs in attempts:
+            image_kwargs = dict(raw_kwargs)
+            # 競合するパラメータを除去
+            if 'width' in image_kwargs:
+                image_kwargs.pop('use_container_width', None)
+                image_kwargs.pop('use_column_width', None)
+            if image_kwargs.get('use_container_width') is not None and image_kwargs.get('use_column_width') is not None:
+                image_kwargs.pop('use_column_width')
+            try:
+                st.image(str(image_path), caption=caption, **image_kwargs)
+                break
+            except (TypeError, StreamlitAPIException) as exc:
+                last_error = exc
+        else:
+            # どの表示方法でも失敗した場合は最後のエラーをログし、最小構成で表示
+            if last_error:
+                logger.warning("画像表示で互換性の問題が発生しました: %s", last_error)
+            st.image(str(image_path), caption=caption)
         return True
     else:
-        # 画像が見つからない場合は代替表示
-        if caption:
-            st.info(f"📷 {caption} (画像: {filename})")
-        else:
-            st.info(f"📷 画像: {filename}")
+        # 画像が見つからない場合はログのみ出力
+        logger.warning("画像が見つかりませんでした: category=%s filename=%s", category, filename)
         return False
 
 def display_image_grid(category, image_list, columns=3, captions=None):
@@ -91,16 +111,13 @@ def display_image_grid(category, image_list, columns=3, captions=None):
 def display_quiz_option_with_image(category, filename, option_text, key, selected_value=None):
     """クイズ選択肢を画像付きで表示"""
     image_path = get_image_path(category, filename)
-    
+
     # カラムで画像とボタンを並べる
     col1, col2 = st.columns([1, 2])
-    
+
     with col1:
         if os.path.exists(image_path):
-            try:
-                st.image(str(image_path), width='stretch')
-            except TypeError:
-                st.image(str(image_path), use_column_width=True)
+            display_image(category, filename, fill='stretch')
         else:
             st.info("📷")
     

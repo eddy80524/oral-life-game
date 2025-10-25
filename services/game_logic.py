@@ -8,6 +8,8 @@ from typing import Dict, Tuple, Optional
 import uuid
 from datetime import datetime
 
+from . import teeth as teeth_service
+
 def initialize_game_state():
     """ゲーム状態の初期化"""
     if 'game_state' not in st.session_state:
@@ -57,6 +59,9 @@ def initialize_game_state():
     if 'job_experience_done' not in st.session_state:
         st.session_state.job_experience_done = False
 
+    teeth_service.ensure_tooth_state(st.session_state.game_state)
+    st.session_state.teeth_count = st.session_state.game_state.get("teeth_count", 20)
+
 def roll_1to3() -> int:
     """1-3のサイコロを振る"""
     return random.randint(1, 3)
@@ -89,10 +94,14 @@ def apply_delta(tooth_delta: int = 0, teeth_delta: int = 0) -> Dict[str, int]:
     # 歯の本数の更新（0-28の範囲）
     new_teeth = max(0, min(28, old_teeth + teeth_delta))
     st.session_state.teeth_count = new_teeth
+    if 'game_state' in st.session_state:
+        st.session_state.game_state['teeth_count'] = new_teeth
     
     # Toothコインの更新（負の値も許可）
     new_coins = old_coins + tooth_delta
     st.session_state.tooth_coins = new_coins
+    if 'game_state' in st.session_state:
+        st.session_state.game_state['tooth_coins'] = new_coins
     
     return {
         'old_teeth': old_teeth,
@@ -122,13 +131,23 @@ def apply_branch_after_quiz(quiz_type: str, correct_count: int) -> Optional[str]
 def lose_teeth_and_pay() -> Dict[str, int]:
     """歯周病不正解の動的処理：出た数の歯を失い、歯×2のToothを支払う"""
     dice_roll = roll_1to3()
-    teeth_lost = min(dice_roll, st.session_state.teeth_count)  # 現在の歯数を超えない
-    payment = st.session_state.teeth_count * 2
+    current_teeth = st.session_state.game_state.get("teeth_count", st.session_state.teeth_count)
+    teeth_lost = min(dice_roll, current_teeth)  # 現在の歯数を超えない
+    payment = current_teeth * 2
     
     result = apply_delta(tooth_delta=-payment, teeth_delta=-teeth_lost)
     result['dice_roll'] = dice_roll
     result['teeth_lost'] = teeth_lost
     result['payment'] = payment
+    
+    if teeth_lost > 0:
+        lost_ids = teeth_service.lose_random_teeth(
+            st.session_state.game_state,
+            count=teeth_lost,
+            permanent=True,
+        )
+        result['lost_tooth_ids'] = lost_ids
+        teeth_service.sync_teeth_count(st.session_state.game_state)
     
     return result
 

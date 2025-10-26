@@ -213,7 +213,7 @@
     "audio_id": "dentures"
   },
   {
-    "cell": 19,
+    "cell": 20,
     "type": "branch_fail",
     "title": "茶渋除去",
     "desc": "お茶を飲み過ぎて茶渋がいっぱいできた。歯医者に行って歯を白くしてもらった。3トゥース払う。",
@@ -221,7 +221,7 @@
     "audio_id": "tea_stain_removal"
   },
   {
-    "cell": 20,
+    "cell": 19,
     "type": "branch_pass",
     "title": "きれいな歯茎",
     "desc": "きれいな歯茎のおかげで自信を持って笑える。一緒に笑おう！",

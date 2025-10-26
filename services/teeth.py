@@ -240,9 +240,17 @@ def lose_primary_tooth(game_state: Dict, count: int = 1) -> List[str]:
             "lateral_incisor",
             "canine",
         ))
-    priority = ["UL1", "UR1", "LL1", "LR1", "UL2", "UR2", "LL2", "LR2"]
-    candidates = [
-        tooth for tooth in _iter_teeth(game_state, kinds=(
+    preferred_order = [
+        "UL1", "UR1", "LL1", "LR1",
+        "UL2", "UR2", "LL2", "LR2",
+        "UL3", "UR3", "LL3", "LR3",
+        "UL4", "UR4", "LL4", "LR4",
+        "UL5", "UR5", "LL5", "LR5",
+    ]
+
+    candidates = {
+        tooth["id"]: tooth
+        for tooth in _iter_teeth(game_state, kinds=(
             "primary_central_incisor",
             "primary_lateral_incisor",
             "primary_canine",
@@ -250,16 +258,22 @@ def lose_primary_tooth(game_state: Dict, count: int = 1) -> List[str]:
             "primary_second_molar",
         ))
         if tooth.get("status") == "healthy"
-    ]
-    candidates.sort(key=lambda t: priority.index(t["id"]) if t["id"] in priority else len(priority))
+    }
+
+    ordered_ids = preferred_order + [tid for tid in candidates if tid not in preferred_order]
+
     lost_ids: List[str] = []
-    for tooth in candidates:
+    for tooth_id in ordered_ids:
         if count <= 0:
             break
+        tooth = candidates.get(tooth_id)
+        if not tooth:
+            continue
         tooth["status"] = "lost_temp"
         tooth["permanent_loss"] = False
-        lost_ids.append(tooth["id"])
+        lost_ids.append(tooth_id)
         count -= 1
+
     sync_teeth_count(game_state)
     return lost_ids
 

@@ -784,6 +784,8 @@ def show_reception_page():
     st.session_state.setdefault('photo_consent', False)
     st.session_state.setdefault('reception_step', 0)
     st.session_state.setdefault('reception_age_label', "5さい")
+    if st.session_state.reception_step == 0:
+        st.session_state.pop('post_quiz_full_teeth', None)
 
     step = st.session_state.reception_step
 
@@ -1001,6 +1003,27 @@ def show_game_board_page():
     # game_stateは常にst.session_stateから直接参照
     game_state = st.session_state.game_state
     current_position = game_state.get('current_position', 0)
+
+    def ensure_post_quiz_full_teeth():
+        if st.session_state.get('post_quiz_full_teeth'):
+            return
+        if game_state.get('current_position', 0) < 6:
+            return
+        from services import teeth as teeth_service
+        teeth_service.ensure_tooth_state(game_state)
+        if game_state.get('tooth_stage') != 'adult':
+            teeth_service.upgrade_to_adult(game_state)
+        for tooth in game_state.get('tooth_chart', []):
+            tooth['status'] = 'healthy'
+            tooth['permanent_loss'] = False
+        teeth_service.sync_teeth_count(game_state)
+        game_state['teeth_count'] = 28
+        game_state['teeth_max'] = 28
+        game_state['teeth_missing'] = 0
+        st.session_state.teeth_count = 28
+        st.session_state.post_quiz_full_teeth = True
+
+    ensure_post_quiz_full_teeth()
 
     # ボードデータ読み込み
     board_data = []
@@ -1238,11 +1261,6 @@ def show_game_board_page():
             title = current_cell.get('title', '')
             action_taken = False
 
-            event_effect_messages = {
-                'ジャンプができるようになった': "ジャンプでからだをうごかして げんきいっぱい！",
-                '初めて乳歯が抜けた': "ぬけた歯のおはなしをして たいせつにしよう。",
-            }
-
             if cell_type == 'quiz':
                 quiz_type = current_cell.get('quiz_type', '')
                 if quiz_type == 'caries':
@@ -1276,9 +1294,6 @@ def show_game_board_page():
                     'ジャンプができるようになった': '🤸 ジャンプをする',
                     '初めて乳歯が抜けた': '🦷 はのおはなしをする'
                 }
-                extra_caption = event_effect_messages.get(title)
-                if extra_caption:
-                    st.caption(extra_caption)
                 if title in event_button_text:
                     if st.button(event_button_text[title], width='stretch', type='secondary', key=f'event_action_{current_position}'):
                         st.success('たのしい たいけんでした！ トゥースコインはそのままだよ。')
@@ -1845,9 +1860,9 @@ def show_perio_quiz_page():
                 from services.image_helper import display_image
                 col3, col4 = st.columns(2)
                 with col3:
-                    display_image("quiz/periodontitis", "question_2a", "はぐきの状態C")
+                    display_image("quiz/periodontitis", "question_2a", "問題")
                 with col4:
-                    display_image("quiz/periodontitis", "question_2b", "はぐきの状態D")
+                    display_image("quiz/periodontitis", "question_2b", "はぐきの状態")
             except ImportError:
                 pass
 
@@ -1916,11 +1931,11 @@ def show_perio_quiz_page():
                         game_state['tooth_coins'] += 5
                         show_coin_change(old_coins, game_state['tooth_coins'], "🌟 よくできました！")
                         st.balloons()
+                        game_state['current_position'] = 19
                     else:
                         game_state['tooth_coins'] = max(0, game_state['tooth_coins'] - 3)
                         show_coin_change(old_coins, game_state['tooth_coins'], "💧 もうすこし べんきょうしようね")
-
-                    game_state['current_position'] = 19
+                        game_state['current_position'] = 17
 
                 st.session_state.perio_quiz_stage = 'intro'
                 st.session_state.pop('perio_quiz_answers', None)

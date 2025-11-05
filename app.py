@@ -488,54 +488,6 @@ def staff_access_enabled() -> bool:
 
 
 
-def show_coin_change(old_coins, new_coins, reason=""):
-    """トゥースコインの増減を視覚的に表示"""
-    change = new_coins - old_coins
-    
-    if change > 0:
-        # コイン増加
-        st.markdown(f"""
-        <div style='text-align: center; background: linear-gradient(135deg, #FFD700, #FFA500); 
-                    padding: 20px; border-radius: 15px; border: 3px solid #FF8C00; 
-                    margin: 20px 0; box-shadow: 0 6px 12px rgba(0,0,0,0.2);'>
-            <h2 style='color: #B8860B; margin: 5px 0; text-shadow: 1px 1px 2px rgba(0,0,0,0.3);'>
-                🪙 トゥースコイン ゲット！ 🪙
-            </h2>
-            <div style='font-size: 2.5em; margin: 10px 0;'>
-                <span style='color: #8B4513; font-weight: bold;'>{old_coins}</span>
-                <span style='color: #228B22; font-size: 1.2em; margin: 0 10px;'>+{change}</span>
-                <span style='color: #8B4513; font-weight: bold;'>→ {new_coins}</span>
-            </div>
-            <p style='color: #8B4513; font-size: 1.2em; margin: 5px 0; font-weight: bold;'>
-                {reason}
-            </p>
-        </div>
-        """, unsafe_allow_html=True)
-        st.balloons()
-    elif change < 0:
-        # コイン減少
-        st.markdown(f"""
-        <div style='text-align: center; background: linear-gradient(135deg, #FFB6C1, #FFA0B4); 
-                    padding: 20px; border-radius: 15px; border: 3px solid #DC143C; 
-                    margin: 20px 0; box-shadow: 0 6px 12px rgba(0,0,0,0.2);'>
-            <h2 style='color: #8B0000; margin: 5px 0; text-shadow: 1px 1px 2px rgba(0,0,0,0.3);'>
-                💸 トゥースコイン へっちゃった... 💸
-            </h2>
-            <div style='font-size: 2.5em; margin: 10px 0;'>
-                <span style='color: #8B4513; font-weight: bold;'>{old_coins}</span>
-                <span style='color: #DC143C; font-size: 1.2em; margin: 0 10px;'>{change}</span>
-                <span style='color: #8B4513; font-weight: bold;'>→ {new_coins}</span>
-            </div>
-            <p style='color: #8B0000; font-size: 1.2em; margin: 5px 0; font-weight: bold;'>
-                {reason}
-            </p>
-        </div>
-        """, unsafe_allow_html=True)
-    else:
-        # 変化なし
-        st.info(f"🪙 トゥースコイン: {new_coins}まい (変化なし)")
-
-
 def apply_tooth_effects(game_state, landing_cell, feedback):
     """ボードイベントに応じた歯の状態変化を適用"""
     teeth_service.ensure_tooth_state(game_state)
@@ -546,9 +498,12 @@ def apply_tooth_effects(game_state, landing_cell, feedback):
 
     if title == "虫歯クイズ":
         if teeth_service.upgrade_to_adult(game_state):
+            # 抜けていた歯も含めて完全に28本にリセット
+            teeth_service.reset_all_teeth_to_healthy(game_state)
             teeth_service.sync_teeth_count(game_state)
             game_state['teeth_count'] = 28
             game_state['teeth_max'] = 28
+            game_state['teeth_missing'] = 0
             st.session_state.teeth_count = 28
             tooth_messages.append(('success', '✨ 大人の歯が ぜんぶ生えそろったよ！28本になったね。'))
             effect_applied = True
@@ -686,16 +641,16 @@ def show_status_header():
 
         game_state = st.session_state.game_state
 
-        col_teeth, col_coin = st.columns([0.6, 0.4])
-
-        with col_teeth:
+        # 歯の本数表示のみ（1列表示）
+        with st.container():
             current_position = game_state.get('current_position', 0)
             tooth_stage = game_state.get('tooth_stage')
             if tooth_stage in {'child', 'adult'}:
                 stage = tooth_stage
             else:
-                stage = 'child' if current_position < 6 else 'adult'
-
+                # 虫歯クイズ（5マス目 = 位置4）以降は adult
+                stage = 'child' if current_position < 5 else 'adult'
+            
             if stage == 'child':
                 base_order = ["乳中切歯", "乳側切歯", "乳犬歯", "第一乳臼歯", "第二乳臼歯"]
                 short_map = {
@@ -723,21 +678,48 @@ def show_status_header():
             right_side = base_order
             upper_labels = left_side + right_side
             lower_labels = upper_labels
-            present_teeth = min(game_state.get('teeth_count', total_teeth), total_teeth)
-            if stage == 'adult' and game_state.get('teeth_missing', 0) == 0:
-                present_teeth = total_teeth
 
-            def render_row(labels, offset):
+            # 実際の tooth_chart から歯の状態を取得
+            tooth_chart = game_state.get('tooth_chart', [])
+            tooth_status = {}
+            healthy_count = 0
+            for tooth in tooth_chart:
+                if tooth.get('visible', True):
+                    tooth_id = tooth.get('id')
+                    status = tooth.get('status', 'healthy')
+                    tooth_status[tooth_id] = status
+                    # 健康な歯をカウント
+                    if status in ['healthy', 'cavity', 'treated']:
+                        healthy_count += 1
+            
+            # present_teeth は実際の健康な歯の数を使用
+            present_teeth = healthy_count
+
+            # 歯のIDマッピング（表示順 → tooth_id）
+            if stage == 'child':
+                # 上列: 左5-1, 右1-5 → UL5,UL4,UL3,UL2,UL1, UR1,UR2,UR3,UR4,UR5
+                upper_ids = [f"UL{i}" for i in range(5, 0, -1)] + [f"UR{i}" for i in range(1, 6)]
+                # 下列: 左5-1, 右1-5 → LL5,LL4,LL3,LL2,LL1, LR1,LR2,LR3,LR4,LR5
+                lower_ids = [f"LL{i}" for i in range(5, 0, -1)] + [f"LR{i}" for i in range(1, 6)]
+            else:
+                # 上列: 左7-1, 右1-7 → UL7,UL6,...,UL1, UR1,UR2,...,UR7
+                upper_ids = [f"UL{i}" for i in range(7, 0, -1)] + [f"UR{i}" for i in range(1, 8)]
+                # 下列: 左7-1, 右1-7 → LL7,LL6,...,LL1, LR1,LR2,...,LR7
+                lower_ids = [f"LL{i}" for i in range(7, 0, -1)] + [f"LR{i}" for i in range(1, 8)]
+
+            def render_row(labels, tooth_ids):
                 cells = []
-                for idx, label in enumerate(labels):
+                for idx, (label, tooth_id) in enumerate(zip(labels, tooth_ids)):
                     short = short_map.get(label, label)
-                    filled = (offset + idx) < present_teeth
+                    # tooth_chart の状態を確認
+                    status = tooth_status.get(tooth_id, 'healthy')
+                    filled = status in ['healthy', 'cavity', 'treated']
                     classes = "simple-tooth-block-labeled " + ("is-filled" if filled else "is-missing")
                     cells.append(f"<div class='{classes}' data-label='{short}'></div>")
                 return ''.join(cells)
 
-            upper_html = render_row(upper_labels, 0)
-            lower_html = render_row(lower_labels, len(upper_labels))
+            upper_html = render_row(upper_labels, upper_ids)
+            lower_html = render_row(lower_labels, lower_ids)
 
             st.markdown(
                 f"""
@@ -750,24 +732,6 @@ def show_status_header():
                 """,
                 unsafe_allow_html=True,
             )
-
-        with col_coin:
-            tooth_coins = game_state.get('tooth_coins', 10)
-            st.metric("🏅 トゥースコイン", f"{tooth_coins}枚")
-
-            coins_to_show = min(tooth_coins, 10)
-            if coins_to_show > 0:
-                icons = ["💰"] * coins_to_show
-                while icons:
-                    line = " ".join(icons[:5])
-                    st.markdown(f"#### {line}")
-                    icons = icons[5:]
-            else:
-                st.caption("まだコインはないよ！")
-
-            extra_coins = tooth_coins - coins_to_show
-            if extra_coins > 0:
-                st.caption(f"+ {extra_coins}枚")
 
 def show_reception_page():
     """受付・プロローグページ（フルスクリーンウィザード）"""
@@ -1007,7 +971,8 @@ def show_game_board_page():
     def ensure_post_quiz_full_teeth():
         if st.session_state.get('post_quiz_full_teeth'):
             return
-        if game_state.get('current_position', 0) < 6:
+        # 虫歯クイズ（5マス目 = 位置4）以降かチェック
+        if game_state.get('current_position', 0) < 5:
             return
         from services import teeth as teeth_service
         teeth_service.ensure_tooth_state(game_state)
@@ -1131,10 +1096,11 @@ def show_game_board_page():
                 new_coins = max(0, old_coins + tooth_delta)
                 st.session_state.game_state['tooth_coins'] = new_coins
                 
-                tone = 'success' if tooth_delta > 0 else 'warning'
-                message = (f"🏅 トゥースコインを {tooth_delta}枚 もらったよ！（合計: {new_coins}枚）" if tooth_delta > 0
-                           else f"💔 トゥースコインを {abs(tooth_delta)}枚 うしなった...（残り: {new_coins}枚）")
-                feedback['coin_messages'].append((tone, message))
+                # トゥースコインメッセージは非表示
+                # tone = 'success' if tooth_delta > 0 else 'warning'
+                # message = (f"🏅 トゥースコインを {tooth_delta}枚 もらったよ！（合計: {new_coins}枚）" if tooth_delta > 0
+                #            else f"💔 トゥースコインを {abs(tooth_delta)}枚 うしなった...（残り: {new_coins}枚）")
+                # feedback['coin_messages'].append((tone, message))
 
             apply_tooth_effects(st.session_state.game_state, landing_cell, feedback)
 
@@ -1374,7 +1340,7 @@ def show_game_board_page():
                     pool = allowed_numbers or [1]
                     animation_sequence = []
                     base_sequence = list(range(1, 4))
-                    for _ in range(3):
+                    for _ in range(5):
                         animation_sequence.extend(base_sequence)
                     animation_sequence.extend(pool)
                     for value in animation_sequence:
@@ -1382,7 +1348,7 @@ def show_game_board_page():
                             render_card(value, subtitle="ルーレット くるくる…", message="どの数字になるかな？"),
                             unsafe_allow_html=True,
                         )
-                        time.sleep(0.07)
+                        time.sleep(0.08)
                     result_value = pool[-1] if len(pool) == 1 else random.choice(pool)
                     st.session_state.roulette_spin_state = {
                         'status': 'result',
@@ -1479,7 +1445,7 @@ def show_caries_quiz_page():
                     st.warning("こたえをえらんでね！")
                 else:
                     if answers[0] == 2:
-                        st.success("せいかい！『は』はエナメルしつで からだのなかで いちばんかたいんだよ。")
+                        st.success("せいかい！『は』は からだのなかで いちばんかたいんだよ。")
                     else:
                         st.warning("ざんねん… いちばんかたいのは『は』だよ。エナメルしつが つよいんだ。")
                         st.info("✅ せいかいは『は』だよ。")
@@ -1608,7 +1574,7 @@ def show_caries_quiz_page():
                     st.warning("❌ えらんだ くみあわせは そこまで むしばになりやすくないよ。")
 
                 if answers[0] == correct_answers[0]:
-                    st.success("もんだい1せいかい！「は」はエナメルしつで からだのなかで いちばんかたいんだよ。")
+                    st.success("もんだい1せいかい！「は」は からだのなかで いちばんかたいんだよ。")
                 else:
                     st.warning("もんだい1は ざんねん… いちばんかたいのは「は」だよ。エナメルしつが つよいんだ。")
 
@@ -1623,12 +1589,10 @@ def show_caries_quiz_page():
 
                     if correct_count >= 1:
                         game_state['tooth_coins'] += 5
-                        show_coin_change(old_coins, game_state['tooth_coins'], "むしばクイズ せいかい！ きをつけられたね")
                         st.success("🌟 よくできました！ けんこうルートに すすみます！")
                         game_state['current_position'] = 10
                     else:
                         game_state['tooth_coins'] = max(0, game_state['tooth_coins'] - 3)
-                        show_coin_change(old_coins, game_state['tooth_coins'], "むしばクイズ ふせいかい... きをつけよう")
                         st.warning("💧 もうすこし きをつけましょう。べつのルートに すすみます。")
                         game_state['current_position'] = 7
 
@@ -1666,11 +1630,7 @@ def show_job_experience_page():
             # 体験完了報酬
             if 'game_state' in st.session_state:
                 game_state = st.session_state.game_state
-                old_coins = game_state.get('tooth_coins', 0)
                 game_state['tooth_coins'] += 5
-                
-                # コイン増加を表示
-                show_coin_change(old_coins, game_state['tooth_coins'], "おしごとたいけん ありがとう！")
             
             st.session_state.selected_job = None  # リセット
             navigate_to('checkup')
@@ -1687,12 +1647,8 @@ def show_checkup_page():
         # 健診報酬
         if 'game_state' in st.session_state:
             game_state = st.session_state.game_state
-            old_coins = game_state.get('tooth_coins', 0)
             game_state['tooth_coins'] += 3
             current_position = game_state.get('current_position', 0)
-            
-            # コイン増加を表示
-            show_coin_change(old_coins, game_state['tooth_coins'], "ていきけんしん ありがとう！")
             
             # ボードデータから現在のセルの次のアクションを取得
             try:
@@ -1925,16 +1881,15 @@ def show_perio_quiz_page():
 
                 if 'game_state' in st.session_state:
                     game_state = st.session_state.game_state
-                    old_coins = game_state['tooth_coins']
 
                     if correct_count >= 1:
                         game_state['tooth_coins'] += 5
-                        show_coin_change(old_coins, game_state['tooth_coins'], "🌟 よくできました！")
+                        st.success("🌟 よくできました！")
                         st.balloons()
                         game_state['current_position'] = 19
                     else:
                         game_state['tooth_coins'] = max(0, game_state['tooth_coins'] - 3)
-                        show_coin_change(old_coins, game_state['tooth_coins'], "💧 もうすこし べんきょうしようね")
+                        st.warning("💧 もうすこし べんきょうしようね")
                         game_state['current_position'] = 17
 
                 st.session_state.perio_quiz_stage = 'intro'
@@ -2126,19 +2081,24 @@ def main():
             and st.session_state.get('caries_quiz_stage', 'intro') == 'intro'
         )
 
+        # 歯のUI表示（一番上）- game_board以外は常に最初に表示
+        if st.session_state.current_page != 'game_board':
+            hide_status_pages = {'caries_quiz', 'perio_quiz'}
+            if not caries_intro and st.session_state.current_page not in hide_status_pages:
+                show_status_header()
+
+        # タイトルとプログレスバー
         hide_progress_pages = {'game_board', 'checkup', 'perio_quiz', 'caries_quiz', 'goal', 'line_coloring'}
         if st.session_state.current_page not in hide_progress_pages and not caries_intro:
             st.markdown(f"<h1 class='main-title'>{current_page_info['title']}</h1>", unsafe_allow_html=True)
             show_progress_bar()
-
-        hide_status_pages = {'caries_quiz', 'perio_quiz'}
-        if not caries_intro and st.session_state.current_page not in hide_status_pages:
-            show_status_header()
     
     # 現在のページに応じてコンテンツを表示
     if st.session_state.current_page == 'reception':
         show_reception_page()
     elif st.session_state.current_page == 'game_board':
+        # game_boardの場合は最初に歯のUIを表示
+        show_status_header()
         show_game_board_page()
     elif st.session_state.current_page == 'caries_quiz':
         show_caries_quiz_page()

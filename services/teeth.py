@@ -208,6 +208,16 @@ def upgrade_to_adult(game_state: Dict) -> bool:
     return True
 
 
+def reset_all_teeth_to_healthy(game_state: Dict) -> None:
+    """すべての歯を健康な状態にリセット（永久歯28本に完全リセット）"""
+    chart = game_state.get("tooth_chart", [])
+    for tooth in chart:
+        if tooth.get("visible", True):
+            tooth["status"] = "healthy"
+            tooth["permanent_loss"] = False
+    sync_teeth_count(game_state)
+
+
 def _find_tooth(game_state: Dict, tooth_id: str) -> Optional[Dict]:
     chart = game_state.get("tooth_chart", [])
     for tooth in chart:
@@ -233,6 +243,7 @@ def _iter_teeth(game_state: Dict, *, kinds: Optional[Sequence[str]] = None,
 
 
 def lose_primary_tooth(game_state: Dict, count: int = 1) -> List[str]:
+    """乳歯を優先順位に従って失う（中切歯 → 側切歯 → 犬歯 → 臼歯の順）"""
     stage = game_state.get("tooth_stage", "child")
     if stage != "child":
         return lose_random_teeth(game_state, count=count, permanent=False, kinds=(
@@ -240,12 +251,13 @@ def lose_primary_tooth(game_state: Dict, count: int = 1) -> List[str]:
             "lateral_incisor",
             "canine",
         ))
+    # 優先順位: 中切歯 → 側切歯 → 犬歯 → 第一乳臼歯 → 第二乳臼歯
     preferred_order = [
-        "UL1", "UR1", "LL1", "LR1",
-        "UL2", "UR2", "LL2", "LR2",
-        "UL3", "UR3", "LL3", "LR3",
-        "UL4", "UR4", "LL4", "LR4",
-        "UL5", "UR5", "LL5", "LR5",
+        "UL1", "UR1", "LL1", "LR1",  # 中切歯
+        "UL2", "UR2", "LL2", "LR2",  # 側切歯
+        "UL3", "UR3", "LL3", "LR3",  # 犬歯
+        "UL4", "UR4", "LL4", "LR4",  # 第一乳臼歯
+        "UL5", "UR5", "LL5", "LR5",  # 第二乳臼歯
     ]
 
     candidates = {

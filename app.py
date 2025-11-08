@@ -8,7 +8,9 @@ import os
 import json
 import random
 import time
+import uuid
 from datetime import datetime
+from typing import Dict
 
 # servicesディレクトリをパスに追加
 sys.path.append(os.path.join(os.path.dirname(__file__), 'services'))
@@ -16,6 +18,7 @@ sys.path.append(os.path.join(os.path.dirname(__file__), 'services'))
 from services import teeth as teeth_service  # noqa: E402
 from services.video_helper import display_video, ensure_video_directories  # noqa: E402
 from services.quiz_helper import load_quiz_data  # noqa: E402
+from services.store import log_player_session  # noqa: E402
 
 ensure_video_directories()
 
@@ -542,10 +545,16 @@ def apply_tooth_effects(game_state, landing_cell, feedback):
         if stained:
             tooth_messages.append(('warning', '🥤 ジュースばかりで歯がすこし黄ばんできたよ。'))
             effect_applied = True
-    if title == "バイクで大事故":
+    if title == "むし歯を放置":
+        # ランダムに1本の歯を失う
+        lost = teeth_service.lose_random_teeth(game_state, count=1, permanent=True)
+        if lost:
+            tooth_messages.append(('error', '😢 むし歯を放っておいたら歯を1本失ってしまった…'))
+            effect_applied = True
+    if title == "バイクで大事故" or title == "バイク事故":
         lost = teeth_service.lose_specific_teeth(game_state, ["UL1", "UR1"], permanent=True)
         if lost:
-            #tooth_messages.append(('error', '💥 まえ歯が2本おれてしまった…きをつけよう！'))
+            tooth_messages.append(('error', '💥 前歯が2本折れてしまった…きをつけよう！'))
             effect_applied = True
     if title == "茶渋除去":
         cleaned = teeth_service.whiten_teeth(game_state)
@@ -743,6 +752,8 @@ def show_reception_page():
     st.session_state.setdefault('reception_age_label', "5さい")
     if st.session_state.reception_step == 0:
         st.session_state.pop('post_quiz_full_teeth', None)
+        st.session_state.pop('session_log_saved', None)
+        st.session_state.pop('session_uid', None)
 
     step = st.session_state.reception_step
 
@@ -2356,12 +2367,49 @@ def show_perio_quiz_page():
             st.caption("こたえをかくにんしてから つぎへすすもう！")
         return
 
+def _build_session_record(game_state: dict) -> Dict[str, any]:
+    session_id = st.session_state.setdefault('session_uid', str(uuid.uuid4()))
+    participant_name = st.session_state.get('participant_name') or "匿名"
+    age = st.session_state.get('participant_age', 5)
+    age_group = "under5" if age < 5 else "5plus"
+    start_time = game_state.get('start_time')
+    if isinstance(start_time, datetime):
+        elapsed = datetime.now() - start_time
+        minutes = int(elapsed.total_seconds() // 60)
+        seconds = int(elapsed.total_seconds() % 60)
+        play_time = f"{minutes}分{seconds}秒"
+        start_time_str = start_time.isoformat()
+    else:
+        play_time = game_state.get('play_time', "0分0秒")
+        start_time_str = start_time
+    return {
+        "session_id": session_id,
+        "participant_name": participant_name,
+        "participant_age": age,
+        "age_group": age_group,
+        "board": age_group,
+        "teeth_count": game_state.get('teeth_count', 0),
+        "tooth_coins": game_state.get('tooth_coins', 0),
+        "turn_count": game_state.get('turn_count', 0),
+        "play_time": play_time,
+        "start_time": start_time_str,
+        "reached_goal": game_state.get('reached_goal', False),
+        "caries_correct": game_state.get('caries_correct_count', 0),
+        "perio_correct": game_state.get('perio_correct_count', 0),
+        "final_position": game_state.get('current_position', 0),
+    }
+
+
 def show_goal_page():
     """ゴール・ランキングページ"""
     st.markdown("### 🏁 ゲームクリア！")
     
     if 'game_state' in st.session_state:
         game_state = st.session_state.game_state
+        if not st.session_state.get('session_log_saved'):
+            record = _build_session_record(game_state)
+            if log_player_session(record):
+                st.session_state.session_log_saved = True
         
         col1, col2 = st.columns(2)
         with col1:

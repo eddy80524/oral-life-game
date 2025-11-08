@@ -12,6 +12,7 @@ import streamlit as st
 LEADERBOARD_FILE = "data/leaderboard.json"
 PARTICIPANTS_FILE = "data/participants.json"
 SETTINGS_FILE = "data/settings.json"
+SESSIONS_FILE = "data/game_sessions.json"
 
 def ensure_data_files():
     """データファイルが存在することを確認"""
@@ -31,6 +32,11 @@ def ensure_data_files():
     if not os.path.exists(SETTINGS_FILE):
         with open(SETTINGS_FILE, 'w', encoding='utf-8') as f:
             json.dump({"staff_pin": "0418", "current_board": "5plus"}, f, ensure_ascii=False, indent=2)
+    
+    # セッションログファイル
+    if not os.path.exists(SESSIONS_FILE):
+        with open(SESSIONS_FILE, 'w', encoding='utf-8') as f:
+            json.dump([], f, ensure_ascii=False, indent=2)
 
 def save_score(player_data: Dict) -> bool:
     """スコアをリーダーボードに保存"""
@@ -267,4 +273,24 @@ def update_participant_count() -> bool:
     
     except Exception as e:
         st.error(f"参加者数更新エラー: {e}")
+        return False
+
+def log_player_session(session_data: Dict) -> bool:
+    """参加者ごとの体験ログを保存"""
+    try:
+        ensure_data_files()
+        with open(SESSIONS_FILE, 'r', encoding='utf-8') as f:
+            sessions = json.load(f)
+        
+        entry = {
+            "timestamp": datetime.now().isoformat(),
+            **session_data,
+        }
+        sessions.append(entry)
+        
+        with open(SESSIONS_FILE, 'w', encoding='utf-8') as f:
+            json.dump(sessions, f, ensure_ascii=False, indent=2)
+        return True
+    except Exception as e:
+        st.error(f"セッションログ保存エラー: {e}")
         return False

@@ -119,7 +119,6 @@
     "title": "野菜チャレンジ",
     "desc": "苦手な野菜に挑戦して頑張って食べてみた。苦手な野菜はあるかな？",
     "image": "board/cell_10",
-    "action": "vegetable_challenge",
     "audio_id": "vegetable_challenge",
     "display_label": "10"
   },

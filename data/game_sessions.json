@@ -1,1 +1,36 @@
-[]
+[
+  {
+    "timestamp": "2025-11-08T14:31:53.196227",
+    "session_id": "801c7a94-346e-4254-be4f-298e22572b50",
+    "participant_name": "テスト",
+    "participant_age": 5,
+    "age_group": "5plus",
+    "board": "5plus",
+    "teeth_count": 28,
+    "tooth_coins": 47,
+    "turn_count": 9,
+    "play_time": "5分9秒",
+    "start_time": "2025-11-08T14:26:43.793535",
+    "reached_goal": true,
+    "caries_correct": 0,
+    "perio_correct": 0,
+    "final_position": 23
+  },
+  {
+    "timestamp": "2025-11-08T14:44:09.046195",
+    "session_id": "8743bff9-96b5-4a23-8eed-9d4f4f28187f",
+    "participant_name": "テスト",
+    "participant_age": 5,
+    "age_group": "5plus",
+    "board": "5plus",
+    "teeth_count": 25,
+    "tooth_coins": 25,
+    "turn_count": 11,
+    "play_time": "12分11秒",
+    "start_time": "2025-11-08T14:31:57.167183",
+    "reached_goal": true,
+    "caries_correct": 0,
+    "perio_correct": 0,
+    "final_position": 23
+  }
+]

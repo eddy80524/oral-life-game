@@ -1461,15 +1461,102 @@ def show_game_board_page():
                 action_taken = True
 
             elif cell_type == 'event':
+                # イベント専用のアクションボタンを持つイベント
                 event_button_text = {
                     '初めて言葉を話せるようになった': '🗣️ じこしょうかいをする',
                     'ジャンプができるようになった': '🤸 ジャンプをする',
-                    '初めて乳歯が抜けた': '🦷 はのおはなしをする'
+                    '初めて乳歯が抜けた': '🦷 はのおはなしをする',
+                    '自己紹介': '🗣️ じこしょうかいをする',
+                    'ジャンプができた': '🤸 ジャンプをする',
+                    '乳歯が抜けた': '🦷 はのおはなしをする'
                 }
-                if title in event_button_text:
+                
+                # イベント完了フラグをチェック
+                event_completed_key = f'event_completed_{current_position}'
+                
+                if title in event_button_text and not st.session_state.get(event_completed_key, False):
+                    # すべてのイベントボタンをセカンダリーに
                     if st.button(event_button_text[title], use_container_width=True, type='secondary', key=f'event_action_{current_position}'):
-                        st.success('たのしい たいけんでした！ トゥースコインはそのままだよ。')
-                        st.balloons()
+                        # ジャンプイベントの場合
+                        if 'ジャンプ' in title:
+                            st.markdown("""
+                            <style>
+                            @keyframes jumpAnimation {
+                                0%, 100% { transform: translateY(0); }
+                                25% { transform: translateY(-30px); }
+                                50% { transform: translateY(0); }
+                                75% { transform: translateY(-15px); }
+                            }
+                            .jump-emoji {
+                                font-size: 4rem;
+                                display: inline-block;
+                                animation: jumpAnimation 1s ease-in-out 3;
+                            }
+                            </style>
+                            <div style='text-align:center; padding: 2rem 0;'>
+                                <div class='jump-emoji'>🤸</div>
+                                <p style='font-size: 1.5rem; color: #4CAF50; margin-top: 1rem;'>すごい！ジャンプできたね！</p>
+                            </div>
+                            """, unsafe_allow_html=True)
+                            time.sleep(3)
+                        # 自己紹介イベントの場合
+                        elif '言葉' in title or '自己紹介' in title:
+                            st.markdown("""
+                            <style>
+                            @keyframes waveAnimation {
+                                0%, 100% { transform: rotate(0deg); }
+                                10% { transform: rotate(14deg); }
+                                20% { transform: rotate(-8deg); }
+                                30% { transform: rotate(14deg); }
+                                40% { transform: rotate(-4deg); }
+                                50% { transform: rotate(10deg); }
+                                60% { transform: rotate(0deg); }
+                            }
+                            .wave-emoji {
+                                font-size: 4rem;
+                                display: inline-block;
+                                transform-origin: 70% 70%;
+                                animation: waveAnimation 1s ease-in-out 3;
+                            }
+                            </style>
+                            <div style='text-align:center; padding: 2rem 0;'>
+                                <div class='wave-emoji'>🗣️</div>
+                                <p style='font-size: 1.5rem; color: #4CAF50; margin-top: 1rem;'>すてきなじこしょうかいができたね！</p>
+                            </div>
+                            """, unsafe_allow_html=True)
+                            time.sleep(3)
+                        # 歯のおはなしイベントの場合
+                        elif '乳歯' in title or 'はのおはなし' in title:
+                            st.markdown("""
+                            <style>
+                            @keyframes sparkleAnimation {
+                                0%, 100% { transform: scale(1) rotate(0deg); opacity: 1; }
+                                25% { transform: scale(1.2) rotate(5deg); opacity: 0.8; }
+                                50% { transform: scale(1) rotate(-5deg); opacity: 1; }
+                                75% { transform: scale(1.2) rotate(5deg); opacity: 0.8; }
+                            }
+                            .sparkle-emoji {
+                                font-size: 4rem;
+                                display: inline-block;
+                                animation: sparkleAnimation 1s ease-in-out 3;
+                            }
+                            </style>
+                            <div style='text-align:center; padding: 2rem 0;'>
+                                <div class='sparkle-emoji'>🦷✨</div>
+                                <p style='font-size: 1.5rem; color: #4CAF50; margin-top: 1rem;'>はのおはなし、ありがとう！</p>
+                            </div>
+                            """, unsafe_allow_html=True)
+                            time.sleep(3)
+                        # イベント完了フラグを立てる
+                        st.session_state[event_completed_key] = True
+                        st.rerun()
+                elif st.session_state.get(event_completed_key, False):
+                    # イベント完了後はaction_takenをFalseにしてルーレットを表示可能にする
+                    action_taken = False
+                    st.success('たのしい たいけんでした！')
+                else:
+                    # ボタンがない通常のイベントの場合
+                    action_taken = False
 
             # cell_15 (next_action='periodontitis_quiz') の場合は、action_taken=Trueでもルーレットを表示
             next_action = current_cell.get('next_action', '')

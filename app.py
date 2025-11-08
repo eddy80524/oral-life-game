@@ -15,6 +15,7 @@ sys.path.append(os.path.join(os.path.dirname(__file__), 'services'))
 
 from services import teeth as teeth_service  # noqa: E402
 from services.video_helper import display_video, ensure_video_directories  # noqa: E402
+from services.quiz_helper import load_quiz_data  # noqa: E402
 
 ensure_video_directories()
 
@@ -29,6 +30,15 @@ st.set_page_config(
 # カスタムCSS（スマホ最適化）
 st.markdown("""
 <style>
+    /* プルトゥリフレッシュ（引っ張って更新）を無効化 */
+    body, html {
+        overscroll-behavior-y: contain;
+    }
+    
+    .stApp {
+        overscroll-behavior-y: contain;
+    }
+    
     /* アプリ全体の背景色設定 */
     .main {
         background-color: #EFE4D0;
@@ -462,7 +472,7 @@ PAGE_FLOW = {
     'reception': {'title': '📋 受付・プロローグ', 'next': 'game_board'},
     'game_board': {'title': '🎲 ゲームボード', 'next': 'caries_quiz'},
     'caries_quiz': {'title': '🦷 むし歯クイズ', 'next': 'game_board'},
-    'job_experience': {'title': '👩‍⚕️ 職業体験', 'next': 'checkup'},
+    'job_experience': {'title': '👩‍⚕️ おしごとたいけん', 'next': 'checkup'},
     'checkup': {'title': '🏥 定期健診', 'next': 'game_board'},
     'perio_quiz': {'title': '🦷 歯周病クイズ', 'next': 'goal'},
     'goal': {'title': '🏁 ゴール・ランキング', 'next': 'line_coloring'},
@@ -535,7 +545,7 @@ def apply_tooth_effects(game_state, landing_cell, feedback):
     if title == "バイクで大事故":
         lost = teeth_service.lose_specific_teeth(game_state, ["UL1", "UR1"], permanent=True)
         if lost:
-            tooth_messages.append(('error', '💥 まえ歯が2本おれてしまった…きをつけよう！'))
+            #tooth_messages.append(('error', '💥 まえ歯が2本おれてしまった…きをつけよう！'))
             effect_applied = True
     if title == "茶渋除去":
         cleaned = teeth_service.whiten_teeth(game_state)
@@ -605,25 +615,9 @@ def show_progress_bar():
     
     progress_percentage = (current_stage_index / (len(progress_stages) - 1)) * 100
     
-    # 子供向けの進捗メッセージ
-    if progress_percentage <= 10:
-        progress_message = "🌱 スタート"
-    elif progress_percentage <= 25:
-        progress_message = "🚀 いいね！"
-    elif progress_percentage <= 50:
-        progress_message = "⭐ はんぶん"
-    elif progress_percentage <= 75:
-        progress_message = "🎉 がんばれ"
-    elif progress_percentage <= 90:
-        progress_message = "🏆 あとすこし"
-    else:
-        progress_message = "🎊 ゴール！"
-    
     st.markdown(f"""
     <div class="progress-container">
-        <div class="progress-fill" style="width: {max(progress_percentage, 15)}%;">
-            <span>{progress_message}</span>
-        </div>
+        <div class="progress-fill" style="width: {max(progress_percentage, 15)}%;"></div>
     </div>
     """, unsafe_allow_html=True)
 
@@ -727,7 +721,6 @@ def show_status_header():
                     <div class="simple-teeth-row teeth-upper">{upper_html}</div>
                     <div class="teeth-midline"></div>
                     <div class="simple-teeth-row teeth-lower">{lower_html}</div>
-                    <div class="simple-teeth-label">🦷 {present_teeth} / {total_teeth} 本</div>
                 </div>
                 """,
                 unsafe_allow_html=True,
@@ -853,7 +846,7 @@ def show_reception_page():
         if step == 0:
             render_reception_image("cover")
             st.markdown("<div style='height:2vh'></div>", unsafe_allow_html=True)
-            if st.button("はじめる", key="reception_next_cover", width='stretch', type="primary"):
+            if st.button("はじめる", key="reception_next_cover", use_container_width=True, type="primary"):
                 st.session_state.reception_step = 1
                 st.rerun()
 
@@ -863,7 +856,7 @@ def show_reception_page():
             st.markdown("<p class='reception-text'>みんなには100さいになるまで<br>きれいなおくちですごしてもらうよ！</p>", unsafe_allow_html=True)
             st.caption("※ 音声ガイドは準備中だよ。")
             st.markdown("<div style='height:1vh'></div>", unsafe_allow_html=True)
-            if st.button("すすむ", key="reception_next_welcome", width='stretch', type="primary"):
+            if st.button("すすむ", key="reception_next_welcome", use_container_width=True, type="primary"):
                 st.session_state.reception_step = 2
                 st.rerun()
 
@@ -877,7 +870,7 @@ def show_reception_page():
                 key="reception_name_input",
                 label_visibility="collapsed"
             )
-            if st.button("すすむ", key="reception_next_name", width='stretch', type="primary"):
+            if st.button("すすむ", key="reception_next_name", use_container_width=True, type="primary"):
                 if not name_input.strip():
                     st.warning("なまえをいれてね！")
                 else:
@@ -902,7 +895,7 @@ def show_reception_page():
                 help="プルダウンからえらんでね"
             )
             st.session_state.reception_age_label = selected_label
-            if st.button("すすむ", key="reception_next_age", width='stretch', type="primary"):
+            if st.button("すすむ", key="reception_next_age", use_container_width=True, type="primary"):
                 if selected_label == "11さい以上":
                     participant_age = 11
                 else:
@@ -943,7 +936,7 @@ def show_reception_page():
                     else:
                         st.error("PINがちがうよ。もういちど確認してね。")
 
-            if st.button("すすむ", key="reception_start_game", width='stretch', type="primary", disabled=not st.session_state.reception_wait_unlocked):
+            if st.button("すすむ", key="reception_start_game", use_container_width=True, type="primary", disabled=not st.session_state.reception_wait_unlocked):
                 update_participant_count()
                 st.session_state.reception_step = 0
                 st.session_state.game_board_stage = 'card'
@@ -957,6 +950,8 @@ def show_reception_page():
 
 def show_game_board_page():
     """ゲームボードページ（カード表示とルーレット画面に分離）"""
+    import random  # 最初にインポート
+    
     if 'game_state' not in st.session_state:
         from services.game_logic import initialize_game_state
         initialize_game_state()
@@ -967,6 +962,22 @@ def show_game_board_page():
     # game_stateは常にst.session_stateから直接参照
     game_state = st.session_state.game_state
     current_position = game_state.get('current_position', 0)
+    
+    # ヘルパー関数の定義（使用前に定義）
+    def compute_allowed_numbers_for_action(position: int, game_state: dict):
+        """アクション完了後の次のマス計算"""
+        board_file = f"data/board_main_{'under5' if st.session_state.participant_age < 5 else '5plus'}.json"
+        try:
+            with open(board_file, 'r', encoding='utf-8') as f:
+                board_data = json.load(f)
+            max_position_index = max(len(board_data) - 1, 0)
+            distance_to_goal = max(0, max_position_index - position)
+            if distance_to_goal <= 0:
+                return []
+            max_reachable = min(3, distance_to_goal)
+            return list(range(1, max_reachable + 1))
+        except:
+            return [1, 2, 3]
 
     def ensure_post_quiz_full_teeth():
         if st.session_state.get('post_quiz_full_teeth'):
@@ -1048,8 +1059,18 @@ def show_game_board_page():
     def render_cell_media(position: int, cell_info: dict) -> None:
         try:
             from services.image_helper import display_image
-            cell_image_name = f"cell_{position + 1:02d}"
-            if not display_image("board", cell_image_name, cell_info.get('title', ''), fill='stretch'):
+            image_spec = cell_info.get('image')
+            category = "board"
+            filename = None
+            if isinstance(image_spec, str) and image_spec.strip():
+                parts = image_spec.strip().split("/", 1)
+                if len(parts) == 2:
+                    category, filename = parts
+                else:
+                    filename = parts[0]
+            if not filename:
+                filename = f"cell_{position + 1:02d}"
+            if not display_image(category, filename, "", fill='stretch'):
                 action_name = cell_info.get('action')
                 action_to_image = {
                     'self_introduction': 'self_introduction',
@@ -1058,14 +1079,22 @@ def show_game_board_page():
                     'job_experience': 'job_experience'
                 }
                 if action_name in action_to_image:
-                    display_image("events", action_to_image[action_name], cell_info.get('title', ''), fill='stretch')
+                    display_image("events", action_to_image[action_name], "", fill='stretch')
         except ImportError:
             pass
+
+    def get_display_label(position: int) -> str:
+        if 0 <= position < len(board_data):
+            label = board_data[position].get('display_label')
+            if label:
+                return str(label)
+        return str(position + 1)
 
     def process_spin_result(result_value: int):
         # 最新の位置を取得
         old_position = st.session_state.game_state.get('current_position', 0)
         new_position = min(old_position + result_value, max_position_index)
+        old_label = get_display_label(old_position)
         
         # game_stateを直接更新
         st.session_state.game_state['current_position'] = new_position
@@ -1076,7 +1105,7 @@ def show_game_board_page():
             'result': result_value,
             'old_position': old_position,
             'new_position': new_position,
-            'move_message': f"➡️ {old_position + 1}ばんめ → {new_position + 1}ばんめ にすすんだよ！",
+            'move_message': f"➡️ {old_label}ばんめ → {get_display_label(new_position)}ばんめ にすすんだよ！",
             'coin_messages': [],
             'tooth_messages': [],
             'landing_message': None,
@@ -1086,41 +1115,123 @@ def show_game_board_page():
         }
 
         if board_data and 0 <= new_position < len(board_data):
+            game_state_ref = st.session_state.game_state
+
+            def apply_coin_delta(cell: dict) -> None:
+                tooth_delta = cell.get('tooth_delta', 0)
+                if tooth_delta == 0:
+                    return
+                old_coins = game_state_ref.get('tooth_coins', 10)
+                new_coins = max(0, old_coins + tooth_delta)
+                game_state_ref['tooth_coins'] = new_coins
+
+            def resolve_cell_effect(cell: dict) -> None:
+                apply_coin_delta(cell)
+                apply_tooth_effects(game_state_ref, cell, feedback)
+
             landing_cell = board_data[new_position]
+            resolve_cell_effect(landing_cell)
+
+            step_hops = 0
+            while True:
+                step_delta = landing_cell.get('step_delta')
+                if not isinstance(step_delta, int) or step_delta == 0 or step_hops >= 3:
+                    break
+                cell_id = landing_cell.get('cell', new_position)
+                immunity = st.session_state.get('step_immunity')
+                current_turn = st.session_state.game_state.get('turn_count', 0)
+                if immunity and immunity.get('cell') == cell_id:
+                    if current_turn <= immunity.get('turn', -1) + 1:
+                        st.session_state.pop('step_immunity', None)
+                        break
+                    else:
+                        st.session_state.pop('step_immunity', None)
+                step_hops += 1
+                previous_position = new_position
+                target_position = max(0, min(max_position_index, new_position + step_delta))
+                if target_position == new_position:
+                    break
+                new_position = target_position
+                game_state_ref['current_position'] = new_position
+                direction = "もどった" if step_delta < 0 else "すすんだ"
+                feedback['tooth_messages'].append(('info', f"🔁 {abs(step_delta)}マス{direction}よ！"))
+                if step_delta < 0:
+                    st.session_state.step_immunity = {'cell': cell_id, 'turn': current_turn}
+                landing_cell = board_data[new_position]
+                resolve_cell_effect(landing_cell)
+
             landing_title = landing_cell.get('title', '')
             landing_type = landing_cell.get('type', 'normal')
-
-            tooth_delta = landing_cell.get('tooth_delta', 0)
-            if tooth_delta != 0:
-                old_coins = st.session_state.game_state.get('tooth_coins', 10)
-                new_coins = max(0, old_coins + tooth_delta)
-                st.session_state.game_state['tooth_coins'] = new_coins
-                
-                # トゥースコインメッセージは非表示
-                # tone = 'success' if tooth_delta > 0 else 'warning'
-                # message = (f"🏅 トゥースコインを {tooth_delta}枚 もらったよ！（合計: {new_coins}枚）" if tooth_delta > 0
-                #            else f"💔 トゥースコインを {abs(tooth_delta)}枚 うしなった...（残り: {new_coins}枚）")
-                # feedback['coin_messages'].append((tone, message))
-
-            apply_tooth_effects(st.session_state.game_state, landing_cell, feedback)
+            feedback['move_message'] = f"➡️ {old_label}ばんめ → {get_display_label(new_position)}ばんめ にすすんだよ！"
+            feedback['new_position'] = new_position
 
             if feedback.get('next_page') is None:
                 if landing_type == 'quiz':
-                    if '虫歯' in landing_title:
+                    quiz_type = landing_cell.get('quiz_type', '')
+                    if quiz_type == 'caries' or '虫歯' in landing_title:
                         feedback['landing_message'] = "🦷 むしばクイズのマスにとうちゃく！"
                         feedback['landing_tone'] = 'success'
                         feedback['next_page'] = 'caries_quiz'
                         feedback['next_button_label'] = "🦷 クイズへすすむ"
-                    elif '歯周病' in landing_title:
+                    elif quiz_type == 'periodontitis' or '歯周病' in landing_title or 'はぐき' in landing_title:
                         feedback['landing_message'] = "🦷 はぐきのクイズのマスにとうちゃく！"
                         feedback['landing_tone'] = 'success'
                         feedback['next_page'] = 'perio_quiz'
                         feedback['next_button_label'] = "🦷 クイズへすすむ"
-                elif landing_type == 'stop' or '検診' in landing_title:
-                    feedback['landing_message'] = "🏥 はいしゃさんのマスにとうちゃく！"
-                    feedback['landing_tone'] = 'success'
-                    feedback['next_page'] = 'checkup'
-                    feedback['next_button_label'] = "🏥 けんしんへすすむ"
+                elif landing_type == 'stop':
+                    next_action = landing_cell.get('next_action') or landing_cell.get('route')
+                    if not next_action and '検診' in landing_title:
+                        next_action = 'checkup'
+                    if next_action:
+                        action_map = {
+                            'checkup': {
+                                'message': "🏥 ていきけんしんに いこう！",
+                                'tone': 'success',
+                                'page': 'checkup',
+                                'button': "🏥 けんしんへすすむ"
+                            },
+                            'caries_quiz': {
+                                'message': "🦷 むしばクイズのじゅんびが できたよ！",
+                                'tone': 'success',
+                                'page': 'caries_quiz',
+                                'button': "🦷 クイズへすすむ"
+                            },
+                            'periodontitis_quiz': {
+                                'message': "🦷 はぐきクイズに すすもう！",
+                                'tone': 'success',
+                                'page': 'perio_quiz',
+                                'button': "🦷 クイズへすすむ"
+                            },
+                            'job_experience': {
+                                'message': "👩‍⚕️ おしごとたいけんに いこう！",
+                                'tone': 'success',
+                                'page': 'job_experience',
+                                'button': "👩‍⚕️ おしごとたいけんへ"
+                            },
+                            'refresh': {
+                                'message': "🔁 ボードにもどろう！",
+                                'tone': 'info',
+                                'page': 'refresh'
+                            }
+                        }
+                        action_cfg = action_map.get(next_action)
+                        if action_cfg:
+                            feedback['landing_message'] = action_cfg['message']
+                            feedback['landing_tone'] = action_cfg['tone']
+                            feedback['next_page'] = action_cfg['page']
+                            feedback['next_button_label'] = action_cfg.get('button', feedback['next_button_label'])
+                            if next_action == 'checkup':
+                                target = landing_cell.get('checkup_target') or landing_cell.get('route') or 'caries_quiz'
+                                st.session_state.pending_checkup_target = target
+                                st.session_state.pending_checkup_cell = landing_cell.get('cell', new_position)
+                                st.session_state.pending_checkup_image = landing_cell.get('image')
+                        else:
+                            feedback['landing_message'] = "🏥 はいしゃさんのマスにとうちゃく！"
+                            feedback['landing_tone'] = 'success'
+                            feedback['next_page'] = next_action
+                    else:
+                        feedback['landing_message'] = "🏥 はいしゃさんのマスにとうちゃく！"
+                        feedback['landing_tone'] = 'success'
                 elif '職業' in landing_title:
                     if st.session_state.participant_age >= 5:
                         feedback['landing_message'] = "👩‍⚕️ おしごとたいけんのマスにとうちゃく！"
@@ -1215,42 +1326,126 @@ def show_game_board_page():
                         classes.append("is-current")
                     elif idx < current_position:
                         classes.append("is-visited")
-                    nodes_html.append(f"<div class='{' '.join(classes)}'>{idx + 1}</div>")
+                    label = get_display_label(idx)
+                    nodes_html.append(f"<div class='{' '.join(classes)}'>{label}</div>")
                 st.markdown(
                     f"<div class='board-progress-track'>{''.join(nodes_html)}</div>",
                     unsafe_allow_html=True,
                 )
 
-            render_cell_media(current_position, current_cell)
+            title = current_cell.get('title', '')
+            skip_media = (
+                current_cell
+                and ('職業' in title or 'おしごと' in title or 'お仕事' in title or current_cell.get('type') == 'job_experience')
+                and st.session_state.participant_age >= 5
+            )
+            if not skip_media:
+                render_cell_media(current_position, current_cell)
+
+            special_event_ui = {
+                '初めて乳歯が抜けた': {
+                    'emoji': '👶',
+                    'headline': '乳歯がぬけたよ！',
+                    'body': '大人の歯が生えてくる準備ができたみたい。やさしくうがいをして、新しい歯を待とうね。'
+                }
+            }
+            if title in special_event_ui:
+                highlight = special_event_ui[title]
+                st.markdown(
+                    f"""
+                    <div style="
+                        background: linear-gradient(135deg, #FFF8F0, #FFE5D4);
+                        border: 2px solid #f3c9a9;
+                        border-radius: 16px;
+                        padding: 16px;
+                        margin: 10px 0 6px;
+                        box-shadow: 0 4px 10px rgba(0,0,0,0.08);
+                    ">
+                        <div style="font-size: 2rem; line-height: 1;">{highlight['emoji']}</div>
+                        <div style="font-weight: 700; color: #c25b2a; margin: 4px 0 6px;">
+                            {highlight['headline']}
+                        </div>
+                        <div style="color: #6b3d25; line-height: 1.5; font-size: 0.95rem;">
+                            {highlight['body']}
+                        </div>
+                    </div>
+                    """,
+                    unsafe_allow_html=True,
+                )
 
             cell_type = current_cell.get('type', 'normal')
-            title = current_cell.get('title', '')
             action_taken = False
 
             if cell_type == 'quiz':
                 quiz_type = current_cell.get('quiz_type', '')
                 if quiz_type == 'caries':
-                    if st.button("🦷 むしばクイズにちょうせん！", width='stretch', type="primary"):
+                    if st.button("🦷 むしばクイズにちょうせん！", use_container_width=True, type="primary"):
                         navigate_to('caries_quiz')
                         action_taken = True
                 elif quiz_type == 'periodontitis':
-                    if st.button("🦷 はぐきのクイズにちょうせん！", width='stretch', type="primary"):
+                    if st.button("🦷 はぐきのクイズにちょうせん！", use_container_width=True, type="primary"):
                         navigate_to('perio_quiz')
                         action_taken = True
-            elif cell_type == 'stop' or '検診' in title:
-                if st.button("🏥 はいしゃさんにいく", width='stretch', type="primary"):
-                    navigate_to('checkup')
-                    action_taken = True
-            elif '職業' in title:
-                if st.session_state.participant_age >= 5:
-                    if st.button("👩‍⚕️ おしごとたいけんをする", width='stretch', type="primary"):
+            next_action = current_cell.get('next_action') or current_cell.get('route')
+            if (
+                '職業' in title
+                or 'おしごと' in title
+                or 'お仕事' in title
+                or next_action == 'job_experience'
+                or cell_type == 'job_experience'
+            ):
+                job_allowed = st.session_state.participant_age >= 5
+                if job_allowed and not st.session_state.get('job_experience_completed'):
+                    auto_complete_job_experience(current_position)
+                action_taken = job_allowed  # 5歳以上はここで一旦停止、未満は通常ルーレットへ
+                print(f"\n🔍 DEBUG [職業マス検出]: title='{title}', cell_type='{cell_type}', action_taken={action_taken}")
+                print(f"🔍 DEBUG [職業マス]: participant_age={st.session_state.participant_age}")
+                
+                # 職業体験完了後の処理
+                if st.session_state.get('job_experience_completed'):
+                    st.success("🎉 おしごとたいけん かんりょう！")
+                    st.info("つぎのマスへすすもう！")
+                    
+                    # ルーレットボタンを表示
+                    allowed_numbers, _, _ = compute_allowed_numbers(current_position)
+                    if allowed_numbers:
+                        st.markdown("<div style='height:1.5vh'></div>", unsafe_allow_html=True)
+                        if st.button("🎡 ルーレットをまわす", key="job_to_roulette", use_container_width=True, type="primary"):
+                            st.session_state.job_experience_completed = False  # フラグをリセット
+                            st.session_state.pop('job_auto_processed_cell', None)
+                            st.session_state.pending_spin_allowed = allowed_numbers
+                            st.session_state.pop('roulette_spin_state', None)
+                            st.session_state.game_board_stage = 'roulette'
+                            st.session_state.pop('roulette_recent_feedback', None)
+                            st.rerun()
+                elif st.session_state.participant_age >= 5:
+                    print(f"🔍 DEBUG [職業マス]: 5歳以上 -> ボタン表示")
+                    if st.button("👩‍⚕️ おしごとたいけんへすすむ", use_container_width=True, type="primary", key=f'job_btn_{current_position}'):
+                        print(f"🔍 DEBUG [職業マス]: ボタンクリック -> job_experience へ遷移")
                         navigate_to('job_experience')
-                        action_taken = True
+                        st.rerun()
                 else:
+                    print(f"🔍 DEBUG [職業マス]: 5歳未満 -> スキップメッセージ表示")
                     st.info("おしごとたいけんは5さい以上だよ。")
+            elif cell_type == 'stop' or '検診' in title:
+                # next_actionがperiodontitis_quizの場合は定期検診ページに行かず、
+                # すでに検診完了とみなしてルーレットを表示する
+                if next_action == 'periodontitis_quiz':
+                    # cell_15: 定期検診完了済み、次は歯周病クイズへ
+                    action_taken = True  # ボタン表示せず、ルーレットを有効化
+                    st.success("🏥 ていきけんしん かんりょう！")
+                    st.info("つぎのマスへすすもう！")
+                elif next_action in {'checkup', 'caries_quiz', 'perio_quiz'} or '検診' in title:
+                    # cell_4: 定期検診ページへ遷移
+                    if st.button("🏥 はいしゃさんにいく", use_container_width=True, type="primary"):
+                        target = current_cell.get('checkup_target') or next_action or 'caries_quiz'
+                        st.session_state.pending_checkup_target = target
+                        st.session_state.pending_checkup_cell = current_cell.get('cell', current_position)
+                        st.session_state.pending_checkup_image = current_cell.get('image')
+                        navigate_to('checkup')
             elif cell_type == 'goal' or current_position == max_position_index:
                 st.success("🎉 ゴールにとうちゃく！")
-                if st.button("▶️ ゴールへ", width='stretch', type="primary"):
+                if st.button("▶️ ゴールへ", use_container_width=True, type="primary"):
                     navigate_to('goal')
                 action_taken = True
 
@@ -1261,13 +1456,21 @@ def show_game_board_page():
                     '初めて乳歯が抜けた': '🦷 はのおはなしをする'
                 }
                 if title in event_button_text:
-                    if st.button(event_button_text[title], width='stretch', type='secondary', key=f'event_action_{current_position}'):
+                    if st.button(event_button_text[title], use_container_width=True, type='secondary', key=f'event_action_{current_position}'):
                         st.success('たのしい たいけんでした！ トゥースコインはそのままだよ。')
                         st.balloons()
 
-            can_spin = (not action_taken and cell_type not in {'quiz', 'stop'}
-                        and '検診' not in title and '職業' not in title
+            # cell_15 (next_action='periodontitis_quiz') の場合は、action_taken=Trueでもルーレットを表示
+            next_action = current_cell.get('next_action', '')
+            is_completed_checkup = (next_action == 'periodontitis_quiz')
+            
+            can_spin = ((not action_taken or is_completed_checkup) 
+                        and cell_type not in {'quiz', 'job_experience'}
+                        and not (cell_type == 'stop' and next_action != 'periodontitis_quiz')
+                        and '職業' not in title and 'おしごと' not in title and 'お仕事' not in title
                         and current_position < max_position_index)
+            
+            print(f"🔍 DEBUG [can_spin]: action_taken={action_taken}, cell_type='{cell_type}', title='{title}', next_action='{next_action}', can_spin={can_spin}")
 
             if can_spin:
                 allowed_numbers, _, _ = compute_allowed_numbers(current_position)
@@ -1275,20 +1478,20 @@ def show_game_board_page():
                     st.info("今回はすすむマスがないよ。")
                 else:
                     st.markdown("<div style='height:1.5vh'></div>", unsafe_allow_html=True)
-                    if st.button("🎡 ルーレットをまわす", key="board_to_roulette", width='stretch', type="primary"):
+                    if st.button("🎡 ルーレットをまわす", key="board_to_roulette", use_container_width=True, type="primary"):
                         st.session_state.pending_spin_allowed = allowed_numbers
                         st.session_state.pop('roulette_spin_state', None)
                         st.session_state.game_board_stage = 'roulette'
                         st.session_state.pop('roulette_recent_feedback', None)
                         st.rerun()
             elif not action_taken and current_position >= max_position_index:
-                if st.button("🏁 ゴールへ", width='stretch', type="primary"):
+                if st.button("🏁 ゴールへ", use_container_width=True, type="primary"):
                     navigate_to('goal')
 
         elif stage == 'roulette':
             if current_position >= max_position_index or (current_cell and current_cell.get('type') == 'goal'):
                 st.success("🎉 ゴールにとうちゃく！")
-                if st.button("▶️ ゴールへ", width='stretch', type="primary"):
+                if st.button("▶️ ゴールへ", use_container_width=True, type="primary"):
                     st.session_state.game_board_stage = 'card'
                     navigate_to('goal')
                 return
@@ -1371,26 +1574,33 @@ def show_game_board_page():
     st.markdown("<div style='height:4vh'></div>", unsafe_allow_html=True)
 
 def show_caries_quiz_page():
-    """むしばクイズページ"""
+    """むしばクイズページ（JSON対応）"""
     from services.image_helper import display_image
-
+    
+    # 参加者の年齢を取得
+    participant_age = st.session_state.get('participant_age', 5)
+    
+    # JSONからクイズデータを読み込む
+    quiz_data = load_quiz_data('caries', participant_age)
+    questions = quiz_data.get('questions', [])
+    rewards = quiz_data.get('rewards', {})
+    
     stage = st.session_state.get('caries_quiz_stage', 'intro')
-    answers = st.session_state.setdefault('caries_quiz_answers', [None, None])
+    answers = st.session_state.setdefault('caries_quiz_answers', [None] * len(questions))
 
     if stage == 'intro':
-        st.markdown("### 🦷 むしばクイズ")
-        st.caption("カードを読んだら、ボタンを押してクイズにすすもう！")
+        st.markdown(f"### 🦷 {quiz_data.get('title', 'むしばクイズ')}")
         try:
-            display_image("board", "cell_06", "むしばクイズのカード")
+            display_image("board", "cell_06", "")
         except ImportError:
             st.markdown("カードを確認したかな？むしばについてのクイズに備えてね。")
         if st.button("🦷 クイズへすすむ", type="primary", use_container_width=True):
             st.session_state.caries_quiz_stage = 'question_0'
-            st.session_state.caries_quiz_answers = [None, None]
-            st.session_state.pop('caries_q1_selected', None)
-            st.session_state.pop('caries_q2_selected', None)
-            st.session_state.pop('caries_q1_checked', None)
-            st.session_state.pop('caries_q2_checked', None)
+            st.session_state.caries_quiz_answers = [None] * len(questions)
+            # 各問題のセッションステートをクリア
+            for i in range(len(questions)):
+                st.session_state.pop(f'caries_q{i}_selected', None)
+                st.session_state.pop(f'caries_q{i}_checked', None)
             st.rerun()
         return
 
@@ -1400,7 +1610,18 @@ def show_caries_quiz_page():
         except (IndexError, ValueError):
             question_index = 0
 
-        st.markdown("### 🦷 むしばクイズにちょうせん！")
+        # 1問目のみタイトル表示
+        if question_index == 0:
+            st.markdown(f"### 🦷 {quiz_data.get('title', 'むしばクイズ')}にちょうせん！")
+        
+        if question_index >= len(questions):
+            st.error("問題が見つかりません")
+            return
+        
+        question = questions[question_index]
+        question_id = question.get('id', f'q{question_index}')
+        state_key_selected = f"caries_q{question_index}_selected"
+        state_key_checked = f"caries_q{question_index}_checked"
 
         def render_option_buttons(options, selected, key_prefix):
             state_key = f"{key_prefix}_selected"
@@ -1418,293 +1639,512 @@ def show_caries_quiz_page():
                 st.session_state[state_key] = updated
             return updated
 
-        if question_index == 0:
-            if 'caries_q1_selected' not in st.session_state:
-                st.session_state.caries_q1_selected = None
-            st.markdown("---")
-            st.markdown("**もんだい1: からだのなかで いちばんかたいものは？**")
+        st.markdown("---")
+        st.markdown(f"{question.get('text', '')}</h3>", unsafe_allow_html=True)
+        
+        # 画像表示
+        image_category = question.get('image_category')
+        image_name = question.get('image_name')
+        if image_category or image_name:
             try:
-                display_image("quiz/caries", "question_1", "問題1の画像")
-            except ImportError:
+                display_image(
+                    image_category or 'quiz/caries',
+                    image_name or f'question_{question_index + 1}',
+                    f"問題{question_index + 1}の画像",
+                )
+            except (ImportError, KeyError):
                 pass
 
-            question1_options = ["あたま", "せなか", "は"]
-            selected_idx = render_option_buttons(question1_options, answers[0], "caries_q1")
-            answers[0] = selected_idx
+        # 選択肢表示
+        if state_key_selected not in st.session_state:
+            st.session_state[state_key_selected] = None
+        
+        selected_idx = render_option_buttons(
+            question.get('options', []),
+            answers[question_index],
+            f"caries_q{question_index}"
+        )
+        answers[question_index] = selected_idx
 
-            st.markdown("---")
-            submit_q1 = st.button(
-                "📝 こたえをかくにん",
-                key="caries_submit_q1",
-                type="primary",
-                use_container_width=True,
-            )
+        st.markdown("---")
+        submit_btn = st.button(
+            "📝 こたえをかくにん",
+            key=f"caries_submit_q{question_index}",
+            type="primary",
+            use_container_width=True,
+        )
 
-            if submit_q1:
-                if answers[0] is None:
-                    st.warning("こたえをえらんでね！")
+        if submit_btn:
+            if answers[question_index] is None:
+                st.warning("こたえをえらんでね！")
+            else:
+                correct_answer = question.get('correct', 0)
+                if answers[question_index] == correct_answer:
+                    feedback = question.get('correct_feedback', 'せいかい！')
+                    st.success(feedback)
                 else:
-                    if answers[0] == 2:
-                        st.success("せいかい！『は』は からだのなかで いちばんかたいんだよ。")
-                    else:
-                        st.warning("ざんねん… いちばんかたいのは『は』だよ。エナメルしつが つよいんだ。")
-                        st.info("✅ せいかいは『は』だよ。")
-                    st.session_state.caries_q1_checked = True
+                    feedback = question.get('incorrect_feedback', 'ざんねん…')
+                    st.warning(feedback)
+                    explanation = question.get('explanation', '')
+                    if explanation:
+                        st.info(f"✅ {explanation}")
+                st.session_state[state_key_checked] = True
 
-            if st.session_state.get('caries_q1_checked'):
+        # 次の問題へ or 結果表示
+        if st.session_state.get(state_key_checked):
+            if question_index < len(questions) - 1:
+                # 次の問題へ
                 if st.button(
                     "▶️ つぎのもんだいへ",
-                    key="caries_next_q1",
+                    key=f"caries_next_q{question_index}",
                     type="secondary",
                     use_container_width=True,
                 ):
-                    st.session_state.pop('caries_q1_checked', None)
-                    st.session_state.caries_quiz_stage = 'question_1'
+                    st.session_state.pop(state_key_checked, None)
+                    st.session_state.caries_quiz_stage = f'question_{question_index + 1}'
                     st.rerun()
             else:
-                st.caption("こたえをかくにんしてから つぎへすすもう！")
-            return
-
-        if question_index == 1:
-            if 'caries_q2_selected' not in st.session_state:
-                st.session_state.caries_q2_selected = None
-            st.markdown("**もんだい2: むしばになりやすい くみあわせは？**")
-            try:
-                display_image("quiz/caries", "question_2", "問題2の画像")
-            except ImportError:
-                pass
-
-            if answers[1] is None:
-                answers[1] = st.session_state.get('caries_q2_selected')
-
-            combo_meta = [
-                ("choco_banana", "コーラ", "cola", "チョコバナナ + コーラ"),
-                ("cheese", "おちゃ", "tea", "チーズ + おちゃ"),
-                ("bread", "ミルク", "milk", "パン + ミルク"),
-            ]
-
-            st.markdown("**えらんでね：**")
-            try:
-                option_cols = st.columns(len(combo_meta))
-                for idx, (food_key, drink_label, drink_key, display_label) in enumerate(combo_meta):
-                    with option_cols[idx]:
-                        st.markdown(f"**{display_label}**")
-                        food_col, drink_col = st.columns(2)
-                        with food_col:
-                            display_image("quiz/caries/food", food_key, display_label.split(" + ")[0])
-                        with drink_col:
-                            display_image("quiz/caries/drink", drink_key, drink_label)
-                        button_type = "primary" if answers[1] == idx else "secondary"
-                        if st.button(
-                            "このくみあわせにする",
-                            key=f"caries_q2_btn_{idx}",
-                            use_container_width=True,
-                            type=button_type,
-                        ):
-                            answers[1] = idx
-                            st.session_state['caries_q2_selected'] = idx
-                            st.rerun()
-            except ImportError:
-                st.warning("画像を表示できませんでした。")
-
-            submit_q2 = st.button(
-                "📝 こたえをかくにん",
-                key="caries_submit_q2",
-                type="primary",
-                use_container_width=True,
-            )
-
-            if submit_q2:
-                if answers[1] is None:
-                    st.warning("こたえをえらんでね！")
-                else:
-                    if answers[1] == 0:
-                        st.success("せいかい！ あまいおやつと あまいのみもののくみあわせは むしばのきけんがたかいよ。")
-                    else:
-                        st.warning("ざんねん… むしばになりやすいのは『チョコバナナ + コーラ』だよ。")
-                        st.info("✅ せいかいは『チョコバナナ + コーラ』だよ。")
-                    st.session_state.caries_q2_checked = True
-
-            finalize_pressed = False
-            if st.session_state.get('caries_q2_checked'):
-                finalize_pressed = st.button(
-                    "▶️ つぎへ",
-                    key="caries_finalize_q2",
+                # 最終問題の場合、結果表示
+                if st.button(
+                    "次へすすむ",
+                    key=f"caries_finalize_q{question_index}",
                     type="secondary",
                     use_container_width=True,
-                )
-            else:
-                st.caption("こたえをかくにんしてから けっていしよう！")
-
-            if finalize_pressed:
-                st.session_state.pop('caries_q2_checked', None)
-                correct_answers = [2, 0]
-                correct_count = sum(
-                    1
-                    for i, correct_answer in enumerate(correct_answers)
-                    if i < len(answers) and answers[i] == correct_answer
-                )
-
-                st.success(f"せいかいかず: {correct_count}/2")
-
-                try:
-                    if correct_count >= 1:
-                        st.markdown("### 🌟 むしばになりやすい くみあわせを みつけられたね！")
-                        st.warning("これは むしばになりやすいので きをつけよう！")
-                        col1, col2 = st.columns(2)
-                        with col1:
-                            display_image("quiz/caries/food", "choco_banana", "チョコバナナ（むしばになりやすい）")
-                        with col2:
-                            display_image("quiz/caries/drink", "cola", "コーラ（むしばになりやすい）")
-                    else:
-                        st.markdown("### 💧 これは むしばになりにくいよ")
-                        st.info("おやつやのみものの えらびかたを かんがえてみよう！")
-                        col1, col2 = st.columns(2)
-                        with col1:
-                            display_image("quiz/caries/food", "cheese", "チーズ（むしばになりにくい）")
-                        with col2:
-                            display_image("quiz/caries/drink", "tea", "おちゃ（むしばになりにくい）")
-                except ImportError:
-                    pass
-
-                selected_combo_idx = answers[1]
-                if selected_combo_idx == 0:
-                    st.success("✅ チョコバナナとコーラは むしばになりやすい くみあわせだよ。きをつけようね！")
-                else:
-                    st.warning("❌ えらんだ くみあわせは そこまで むしばになりやすくないよ。")
-
-                if answers[0] == correct_answers[0]:
-                    st.success("もんだい1せいかい！「は」は からだのなかで いちばんかたいんだよ。")
-                else:
-                    st.warning("もんだい1は ざんねん… いちばんかたいのは「は」だよ。エナメルしつが つよいんだ。")
-
-                if answers[1] == correct_answers[1]:
-                    st.info("もんだい2せいかい！あまいチョコバナナと あまいのみもののくみあわせは むしばになりやすいから きをつけよう。")
-                else:
-                    st.info("もんだい2は もうすこし！ あまいものと あまいのみものを あわせると むしばのきけんが ふえるよ。")
-
-                if 'game_state' in st.session_state:
-                    game_state = st.session_state.game_state
-                    old_coins = game_state.get('tooth_coins', 0)
-
-                    if correct_count >= 1:
-                        game_state['tooth_coins'] += 5
-                        st.success("🌟 よくできました！ けんこうルートに すすみます！")
-                        game_state['current_position'] = 10
-                    else:
-                        game_state['tooth_coins'] = max(0, game_state['tooth_coins'] - 3)
-                        st.warning("💧 もうすこし きをつけましょう。べつのルートに すすみます。")
-                        game_state['current_position'] = 7
-
-                st.info("つづきは ゲームボードで！")
-                st.session_state.caries_quiz_stage = 'intro'
-                st.session_state.pop('caries_quiz_answers', None)
-                st.session_state.pop('caries_q1_selected', None)
-                st.session_state.pop('caries_q2_selected', None)
-                navigate_to('game_board')
-            return
+                ):
+                    st.session_state.pop(state_key_checked, None)
+                    
+                    # 正解数をカウント
+                    correct_count = sum(
+                        1
+                        for i, q in enumerate(questions)
+                        if i < len(answers) and answers[i] == q.get('correct', 0)
+                    )
+                    
+                    st.success(f"せいかいかず: {correct_count}/{len(questions)}")
+                    
+                    # 各問題の結果表示
+                    for i, q in enumerate(questions):
+                        if i < len(answers):
+                            if answers[i] == q.get('correct', 0):
+                                st.success(f"もんだい{i+1}せいかい！ {q.get('explanation', '')}")
+                            else:
+                                st.warning(f"もんだい{i+1}は ざんねん… {q.get('explanation', '')}")
+                    
+                    # 報酬とポジション更新
+                    if 'game_state' in st.session_state:
+                        game_state = st.session_state.game_state
+                        high_score = rewards.get('high_score', {})
+                        low_score = rewards.get('low_score', {})
+                        
+                        threshold = high_score.get('threshold', 1)
+                        
+                        if correct_count >= threshold:
+                            coins = high_score.get('coins', 5)
+                            position = high_score.get('position', 10)
+                            message = high_score.get('message', '🌟 よくできました！')
+                            
+                            game_state['tooth_coins'] += coins
+                            game_state['current_position'] = position
+                            st.success(message)
+                        else:
+                            coins = low_score.get('coins', -3)
+                            position = low_score.get('position', 7)
+                            message = low_score.get('message', '💧 もう少し頑張りましょう')
+                            
+                            game_state['tooth_coins'] = max(0, game_state['tooth_coins'] + coins)
+                            game_state['current_position'] = position
+                            st.warning(message)
+                        
+                        # クイズ完了フラグをセット（ループ防止）
+                        game_state['action_taken'] = True
+                        game_state['action_completed'] = True
+                    
+                    st.info("つづきは ゲームボードで！")
+                    
+                    # セッションステートをクリア
+                    st.session_state.caries_quiz_stage = 'intro'
+                    st.session_state.pop('caries_quiz_answers', None)
+                    for i in range(len(questions)):
+                        st.session_state.pop(f'caries_q{i}_selected', None)
+                        st.session_state.pop(f'caries_q{i}_checked', None)
+                    
+                    navigate_to('game_board')
+        else:
+            st.caption("こたえをかくにんしてから つぎへすすもう！")
+        return
 
 def show_job_experience_page():
-    """おしごとたいけんページ"""
-    st.markdown("### 👩‍⚕️ おしごとたいけん")
-    
-    jobs = ["はいしゃさん", "はのおそうじのせんせい", "はをつくるせんせい"]
-    
-    if 'selected_job' not in st.session_state:
-        st.session_state.selected_job = None
-    
-    if st.session_state.selected_job is None:
-        st.markdown("くじをひいて おしごとをきめよう！")
-        
-        if st.button("🎯 くじをひく", width='stretch', type="primary"):
-            import random
-            job_index = random.randint(0, 2)
-            st.session_state.selected_job = jobs[job_index]
-            st.success(f"🎉 {st.session_state.selected_job}にきまったよ！")
-            st.rerun()
-    else:
-        st.info(f"たいけんするおしごと: {st.session_state.selected_job}")
-        st.markdown("1ぷんかん たいけんをします...")
-        
-        if st.button("✅ たいけんかんりょう", width='stretch', type="primary"):
-            # 体験完了報酬
-            if 'game_state' in st.session_state:
-                game_state = st.session_state.game_state
-                game_state['tooth_coins'] += 5
-            
-            st.session_state.selected_job = None  # リセット
-            navigate_to('checkup')
-
-def show_checkup_page():
-    """ていきけんしんページ"""
+    """おしごとたいけんページ（ルーレット機能付き）"""
+    import time
     try:
         from services.image_helper import display_image
-        display_image("board", "cell_05", caption=None, fill='stretch')
     except ImportError:
-        pass
+        display_image = None
     
-    if st.button("🏥 けんしんをうける", width='stretch', type="primary"):
-        # 健診報酬
-        if 'game_state' in st.session_state:
-            game_state = st.session_state.game_state
-            game_state['tooth_coins'] += 3
-            current_position = game_state.get('current_position', 0)
-            
-            # ボードデータから現在のセルの次のアクションを取得
-            try:
-                import json
-                age_group = "under5" if st.session_state.participant_age < 5 else "5plus"
-                board_file = f"data/board_main_{age_group}.json"
-                
-                with open(board_file, 'r', encoding='utf-8') as f:
-                    board_data = json.load(f)
-                
-                current_cell = None
-                for cell in board_data:
-                    if cell['cell'] == current_position:
-                        current_cell = cell
-                        break
-                
-                if current_cell and current_cell.get('next_action'):
-                    next_action = current_cell['next_action']
-                    if next_action == 'caries_quiz':
-                        st.success("けんしん かんりょう！")
-                        st.info("つぎは むしばクイズに ちょうせんしよう！")
-                        navigate_to('caries_quiz')
-                    elif next_action == 'periodontitis_quiz':
-                        st.success("けんしん かんりょう！")
-                        st.info("つぎは はぐきクイズに ちょうせんしよう！")
-                        navigate_to('perio_quiz')
-                    else:
-                        st.success("けんしん かんりょう！")
-                        st.info("つづきは ゲームボードで！")
-                        navigate_to('game_board')
+    # デバッグ情報（ターミナルのみ）
+    print(f"\n🔍 DEBUG [job_experience]: page loaded")
+    
+    if display_image:
+        display_image("board", "cell_13", "", fill='stretch')
+    
+    # 職業データ
+    jobs = [
+        {
+            "id": "dentist",
+            "name": "はいしゃさん",
+            "emoji": "🦷",
+            #"description": "むしばをなおす おいしゃさんだよ"
+        },
+        {
+            "id": "hygienist", 
+            "name": "しかえいせいしさん",
+            "emoji": "✨",
+            #"description": "はをきれいにする せんせいだよ"
+        },
+        {
+            "id": "technician",
+            "name": "しかぎこうしさん", 
+            "emoji": "🔧",
+            #"description": "ぎばや はのかぶせものをつくる せんせいだよ"
+        }
+    ]
+    
+    # ルーレットの状態管理（強制的に初期化）
+    if 'job_roulette_state' not in st.session_state or st.session_state.job_roulette_state is None:
+        st.session_state.job_roulette_state = 'idle'
+    
+    if 'job_roulette_result' not in st.session_state:
+        st.session_state.job_roulette_result = None
+    
+    if 'job_timer_start' not in st.session_state:
+        st.session_state.job_timer_start = None
+    
+    if 'job_force_complete' not in st.session_state:
+        st.session_state.job_force_complete = False
+    
+    if 'job_force_complete_unlocked' not in st.session_state:
+        st.session_state.job_force_complete_unlocked = False
+    
+    roulette_state = st.session_state.job_roulette_state
+    result = st.session_state.job_roulette_result
+    
+    # ターミナルデバッグ出力
+    print(f"\n🔍 DEBUG [job_experience]: roulette_state={roulette_state}, result={result}")
+    print(f"🔍 DEBUG [job_experience]: session_keys={list(st.session_state.keys())}")
+    
+    # ルーレット初期状態
+    if roulette_state == 'idle' or roulette_state is None:
+        print(f"🔍 DEBUG [job_experience]: 初期画面表示")
+        
+        st.markdown("<p style='text-align:center; font-size:1.2em; color:#5d4037; margin:20px 0;'>どの おしごとに ちょうせんするか ルーレットできめよう！</p>", unsafe_allow_html=True)
+        
+        # Streamlitのcolumnsを使ってカード表示
+        cols = st.columns(3)
+        
+        for idx, (col, job) in enumerate(zip(cols, jobs)):
+            with col:
+                # カード風のコンテナ
+                st.markdown(f"""
+                <div style='
+                    background: linear-gradient(135deg, #fff8ec, #ffebd4);
+                    border: 3px solid #d6c5a5;
+                    border-radius: 20px;
+                    padding: 20px;
+                    text-align: center;
+                    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+                    height: 200px;
+                    display: flex;
+                    flex-direction: column;
+                    justify-content: center;
+                '>
+                    <div style='font-size: 4em; margin: 10px 0;'>{job["emoji"]}</div>
+                    <div style='font-size: 1.1em; font-weight: bold; color: #5d4037; margin: 10px 0;'>{job["name"]}</div>
+                </div>
+                """, unsafe_allow_html=True)
+        
+        st.markdown("<div style='height:2vh'></div>", unsafe_allow_html=True)
+        print(f"🔍 DEBUG [job_experience]: st.columns()でカード表示")
+        
+        # ルーレットボタン
+        if st.button("🎰 ルーレットをまわす", key="start_job_roulette", use_container_width=True, type="primary"):
+            print(f"🔍 DEBUG [job_experience]: ルーレットボタンクリック")
+            st.session_state.job_roulette_state = 'spinning'
+            st.rerun()
+    
+    # ルーレット回転中
+    elif roulette_state == 'spinning':
+        print(f"🔍 DEBUG [job_experience]: ルーレット回転中")
+        st.markdown("<p style='text-align:center; font-size:1.2em; color:#ff6b6b;'>🎰 ルーレット ちゅう…</p>", unsafe_allow_html=True)
+        
+        # プレースホルダー
+        card_placeholder = st.empty()
+        
+        # ランダムアニメーション
+        import random
+        animation_sequence = [random.randint(0, 2) for _ in range(12)]
+        final_result = random.randint(0, 2)
+        animation_sequence.append(final_result)
+        
+        print(f"🔍 DEBUG [job_experience]: 最終結果 = {final_result}")
+        
+        # アニメーション実行
+        for active_idx in animation_sequence:
+            with card_placeholder.container():
+                cols = st.columns(3)
+                for idx, (col, job) in enumerate(zip(cols, jobs)):
+                    with col:
+                        # activeクラスの代わりにborder-colorを変更
+                        border_color = "#ff6b6b" if idx == active_idx else "#d6c5a5"
+                        box_shadow = "0 0 30px rgba(255, 107, 107, 0.6)" if idx == active_idx else "0 4px 8px rgba(0,0,0,0.1)"
+                        transform = "scale(1.1)" if idx == active_idx else "scale(1)"
+                        
+                        st.markdown(f"""
+                        <div style='
+                            background: linear-gradient(135deg, #fff8ec, #ffebd4);
+                            border: 3px solid {border_color};
+                            border-radius: 20px;
+                            padding: 20px;
+                            text-align: center;
+                            box-shadow: {box_shadow};
+                            transform: {transform};
+                            transition: all 0.3s ease;
+                            height: 200px;
+                            display: flex;
+                            flex-direction: column;
+                            justify-content: center;
+                        '>
+                            <div style='font-size: 4em; margin: 10px 0;'>{job["emoji"]}</div>
+                            <div style='font-size: 1.1em; font-weight: bold; color: #5d4037; margin: 10px 0;'>{job["name"]}</div>
+                        </div>
+                        """, unsafe_allow_html=True)
+            time.sleep(0.15)
+        
+        # 結果保存
+        st.session_state.job_roulette_result = final_result
+        st.session_state.job_roulette_state = 'result'
+        print(f"🔍 DEBUG [job_experience]: ルーレット完了")
+        st.rerun()
+    
+    # 結果表示
+    elif roulette_state == 'result' and result is not None:
+        selected_job = jobs[result]
+        
+        st.success(f"🎉 {selected_job['name']} にきまったよ！")
+        
+        # 選択された職業を強調表示
+        cols = st.columns(3)
+        for idx, (col, job) in enumerate(zip(cols, jobs)):
+            with col:
+                # 選択されたカードは緑色
+                if idx == result:
+                    border_color = "#4CAF50"
+                    background = "linear-gradient(135deg, #d4f4dd, #c8e6c9)"
+                    box_shadow = "0 0 30px rgba(76, 175, 80, 0.6)"
                 else:
-                    # 位置15の場合は歯茎クイズに進む
-                    if current_position == 15:
-                        st.success("けんしん かんりょう！")
-                        st.info("つぎは はぐきクイズに ちょうせんしよう！")
-                        navigate_to('perio_quiz')
-                    else:
-                        st.success("けんしん かんりょう！")
-                        st.info("つづきは ゲームボードで！")
-                        navigate_to('game_board')
-                    
-            except (FileNotFoundError, json.JSONDecodeError):
-                st.success("🎉 +3コインゲット！")
-                st.success("けんしん かんりょう！")
-                st.info("つづきは ゲームボードで！")
-                navigate_to('game_board')
+                    border_color = "#d6c5a5"
+                    background = "linear-gradient(135deg, #fff8ec, #ffebd4)"
+                    box_shadow = "0 4px 8px rgba(0,0,0,0.1)"
+                
+                st.markdown(f"""
+                <div style='
+                    background: {background};
+                    border: 3px solid {border_color};
+                    border-radius: 20px;
+                    padding: 20px;
+                    text-align: center;
+                    box-shadow: {box_shadow};
+                    height: 200px;
+                    display: flex;
+                    flex-direction: column;
+                    justify-content: center;
+                '>
+                    <div style='font-size: 4em; margin: 10px 0;'>{job["emoji"]}</div>
+                    <div style='font-size: 1.1em; font-weight: bold; color: #5d4037; margin: 10px 0;'>{job["name"]}</div>
+                </div>
+                """, unsafe_allow_html=True)
+        
+        st.markdown("<div style='height:2vh'></div>", unsafe_allow_html=True)
+        print(f"🔍 DEBUG [job_experience]: 結果表示 - st.columns()使用")
+        st.info(f"これから {selected_job['name']}の おしごとを たいけんするよ！")
+        
+        # タイマー表示（5分）
+        if st.session_state.job_timer_start is None:
+            if st.button("⏱️ たいけん スタート！", key="start_job_timer", use_container_width=True, type="primary"):
+                st.session_state.job_timer_start = datetime.now()
+                st.session_state.job_force_complete = False  # 強制完了フラグ初期化
+                st.rerun()
         else:
-            st.success("けんしん かんりょう！")
-            navigate_to('game_board')
+            start_time = st.session_state.job_timer_start
+            elapsed = (datetime.now() - start_time).total_seconds()
+            time_limit = 300  # 5分 = 300秒
+            remaining = max(0, time_limit - elapsed)
+            
+            minutes = int(remaining // 60)
+            seconds = int(remaining % 60)
+            
+            # タイマー表示
+            st.markdown(f"""
+            <div style='text-align:center; background:#fff3cd; border:3px solid #ffc107; 
+                        border-radius:15px; padding:20px; margin:20px 0;'>
+                <p style='font-size:1.2em; color:#856404; margin:0 0 10px 0;'>⏱️ のこり じかん</p>
+                <p style='font-size:2.5em; font-weight:bold; color:#856404; margin:0;'>
+                    {minutes:02d}:{seconds:02d}
+                </p>
+            </div>
+            """, unsafe_allow_html=True)
+            
+            # スタッフ用強制完了機能
+            if 'job_force_complete_unlocked' not in st.session_state:
+                st.session_state.job_force_complete_unlocked = False
+            
+            if not st.session_state.job_force_complete_unlocked:
+                with st.expander("⚙️ スタッフ用"):
+                    from services.store import get_settings
+                    settings = get_settings()
+                    staff_pin = settings.get("staff_pin", "0418")
+                    
+                    pin = st.text_input("スタッフ用パスコード", type="password", key="job_force_pin")
+                    if st.button("体験を完了にする", key="job_force_check", type="secondary"):
+                        if pin == str(staff_pin):
+                            st.session_state.job_force_complete_unlocked = True
+                            st.session_state.job_force_complete = True
+                            st.success("体験が即座に完了しました！")
+                            st.rerun()
+                        else:
+                            st.error("PINがちがうよ。もういちど確認してね。")
+            
+            # 強制完了された場合の表示
+            if st.session_state.get('job_force_complete'):
+                st.success("⚡ スタッフによって体験が即座に完了しました！")
+                remaining = 0  # タイマーを0にする
+            elif remaining > 0:
+                # 自動更新
+                time.sleep(1)
+                st.rerun()
+            else:
+                st.success("⏰ 5ふん たっせい！ おしごとたいけん かんりょう！")
+                
+            # 完了ボタン
+            if st.button("✅ たいけん かんりょう", key="finish_job", use_container_width=True, type="primary"):
+                # 報酬付与
+                if 'game_state' in st.session_state:
+                    game_state = st.session_state.game_state
+                    
+                    if st.session_state.get('job_force_complete'):
+                        # 強制完了の場合も10コイン付与
+                        game_state['tooth_coins'] = game_state.get('tooth_coins', 10) + 10
+                        st.success("🎁 おしごとたいけん かんりょう！ +10トゥースコイン！")
+                    elif remaining > 0:
+                        game_state['tooth_coins'] = game_state.get('tooth_coins', 10) + 10
+                        st.success("🎁 じかんないに かんりょう！ +10トゥースコイン！")
+                    else:
+                        game_state['tooth_coins'] = game_state.get('tooth_coins', 10) + 5
+                        st.success("🎁 おつかれさま！ +5トゥースコイン！")
+                    
+                    # action_taken と action_completed を True にして次へ進めるようにする
+                    game_state['action_taken'] = True
+                    game_state['action_completed'] = True
+                
+                # 状態リセット
+                st.session_state.job_roulette_state = None
+                st.session_state.job_roulette_result = None
+                st.session_state.job_timer_start = None
+                st.session_state.job_force_complete = False
+                st.session_state.job_force_complete_unlocked = False
+                
+                # job_experience_completed フラグを立てる
+                st.session_state.job_experience_completed = True
+                
+                navigate_to('game_board')
+                st.rerun()
+
+def auto_complete_job_experience(cell_position: int) -> None:
+    """物理シャッフル済み前提でデジタル体験をスキップ"""
+    if st.session_state.get('job_auto_processed_cell') == cell_position:
+        return
+    reward = st.session_state.get('job_auto_reward', 5)
+    game_state = st.session_state.get('game_state')
+    if game_state:
+        game_state['tooth_coins'] = game_state.get('tooth_coins', 0) + reward
+        game_state['action_taken'] = True
+        game_state['action_completed'] = True
+    st.session_state.job_experience_completed = True
+    st.session_state.job_auto_processed_cell = cell_position
+    st.session_state.job_auto_last_reward = reward
+
+def show_checkup_page():
+    """定期健診ページ"""
+    from services.image_helper import display_image
+    import json
+    import os
+    
+    def resolve_checkup_target() -> str:
+        target = st.session_state.get('pending_checkup_target')
+        if target:
+            return target
+        pending_cell = st.session_state.get('pending_checkup_cell')
+        board_position = st.session_state.get('game_state', {}).get('current_position', 0)
+        try:
+            game_state = st.session_state.get('game_state', {})
+            age = st.session_state.get('participant_age', 5)
+            board_file = f"data/board_main_{'under5' if age < 5 else '5plus'}.json"
+            board_path = os.path.join(os.getcwd(), board_file)
+            with open(board_path, 'r', encoding='utf-8') as f:
+                board_data = json.load(f)
+            for cell in board_data:
+                cell_id = cell.get('cell')
+                if pending_cell is not None and cell_id == pending_cell:
+                    return cell.get('checkup_target', 'caries_quiz')
+                if cell_id == board_position:
+                    return cell.get('checkup_target', 'caries_quiz')
+        except Exception:
+            pass
+        return 'perio_quiz' if board_position >= 14 else 'caries_quiz'
+    
+    st.markdown("### 🏥 ていきけんしん")
+    target_page = resolve_checkup_target()
+    if target_page == 'perio_quiz':
+        st.caption("おくちをきれいにしたら、つぎは はぐきのクイズに ちょうせん！")
+    else:
+        st.caption("はいしゃさんで はのけんしんを うけよう！")
+    
+    pending_image = st.session_state.get('pending_checkup_image')
+    if pending_image:
+        image_name = pending_image.split('/', 1)[1] if '/' in pending_image else pending_image
+    else:
+        image_name = "cell_15" if target_page == 'perio_quiz' else "cell_05"
+    try:
+        display_image("board", image_name, "")
+    except Exception:
+        st.info("🏥 はいしゃさんに いこう")
+    
+    st.markdown("<div style='height:3vh'></div>", unsafe_allow_html=True)
+    
+    # 定期健診に行くボタン
+    if st.button("🏥 ていきけんしんに いく", key="goto_caries_quiz", use_container_width=True, type="primary"):
+        if 'game_state' in st.session_state:
+            st.session_state.game_state['action_taken'] = True
+        
+        st.session_state.pop('checkup_stage', None)
+        target_page = st.session_state.pop('pending_checkup_target', target_page)
+        st.session_state.pop('pending_checkup_cell', None)
+        st.session_state.pop('pending_checkup_image', None)
+        
+        # むし歯/歯周病クイズに直接遷移
+        navigate_to(target_page)
+        return
 
 def show_perio_quiz_page():
-    """はぐきクイズページ"""
-    questions = [
-        {"q": "はみがきしないと どこから ちがでる？", "options": ["は", "はぐき", "した"], "correct": 1},
-        {"q": "はの ねっこの ところは どうなってる？", "options": ["①", "②", "③"], "correct": 2}
-    ]
+    """はぐきクイズページ（JSON対応）"""
+    from services.image_helper import display_image
+    
+    # 参加者の年齢を取得
+    participant_age = st.session_state.get('participant_age', 5)
+    
+    # JSONからクイズデータを読み込む
+    quiz_data = load_quiz_data('perio', participant_age)
+    questions = quiz_data.get('questions', [])
+    rewards = quiz_data.get('rewards', {})
 
     stage = st.session_state.get('perio_quiz_stage', 'intro')
     if stage == 'questions':
@@ -1712,25 +2152,27 @@ def show_perio_quiz_page():
         st.session_state.perio_quiz_stage = stage
 
     if stage == 'intro':
-        st.markdown("### 🦷 はぐきクイズ")
+        st.markdown(f"### 🦷 {quiz_data.get('title', 'はぐきクイズ')}")
         st.caption("カードをよんだら、ボタンをおしてクイズにすすもう！")
         try:
-            from services.image_helper import display_image
-            display_image("quiz/periodontitis", "main_image", "はぐきクイズのカード")
+            # 5さいみまんの場合はcell_15.pngを表示
+            if participant_age < 5:
+                st.image("assets/images/board/simple/cell_15.png", use_container_width=True)
+            else:
+                # 5歳以上の場合はcell_16.pngを表示
+                st.image("assets/images/board/cell_16.png", use_container_width=True)
         except ImportError:
             st.info("カードをよんで はぐきクイズのじゅんびをしよう。")
         if st.button("🦷 クイズへすすむ", type="primary", use_container_width=True):
             st.session_state.perio_quiz_stage = 'question_0'
             st.session_state.perio_quiz_answers = [None] * len(questions)
-            st.session_state.pop('perio_q1_selected', None)
-            st.session_state.pop('perio_q2_selected', None)
-            st.session_state.pop('perio_q1_checked', None)
-            st.session_state.pop('perio_q2_checked', None)
+            # 各問題のセッションステートをクリア
+            for i in range(len(questions)):
+                st.session_state.pop(f'perio_q{i}_selected', None)
+                st.session_state.pop(f'perio_q{i}_checked', None)
             st.rerun()
         return
 
-    st.markdown("### 🦷 はぐきクイズ")
-    
     answers = st.session_state.setdefault('perio_quiz_answers', [None] * len(questions))
 
     def render_option_buttons(options, selected, key_prefix):
@@ -1755,152 +2197,164 @@ def show_perio_quiz_page():
         except (IndexError, ValueError):
             question_index = 0
 
+        # 1問目のみタイトル表示
+        if question_index == 0:
+            st.markdown(f"### 🦷 {quiz_data.get('title', 'はぐきクイズ')}")
+
+        if question_index >= len(questions):
+            st.error("問題が見つかりません")
+            return
+        
+        question = questions[question_index]
+        state_key_selected = f"perio_q{question_index}_selected"
+        state_key_checked = f"perio_q{question_index}_checked"
+
         st.caption(f"もんだい {question_index + 1} / {len(questions)}")
         st.markdown("---")
 
-        if question_index == 0:
-            if 'perio_q1_selected' not in st.session_state:
-                st.session_state.perio_q1_selected = None
-            st.markdown("**問題1: はぐきの状態を比べてみよう**")
+        if state_key_selected not in st.session_state:
+            st.session_state[state_key_selected] = None
+        
+        # 問題の画像表示
+        image_category = question.get('image_category')
+        image_name = question.get('image_name')
+        if image_category or image_name:
             try:
-                from services.image_helper import display_image
-                col1, col2 = st.columns(2)
-                with col1:
-                    display_image("quiz/periodontitis", "question_1a", "問題")
-                with col2:
-                    display_image("quiz/periodontitis", "question_1b", "はぐきの状態")
-            except ImportError:
+                resolved_category = image_category or 'quiz/periodontitis'
+                # image_nameが配列の場合は複数画像を並べて表示
+                if isinstance(image_name, list):
+                    cols = st.columns(len(image_name))
+                    for idx, img_name in enumerate(image_name):
+                        with cols[idx]:
+                            display_image(resolved_category, img_name, "")
+                else:
+                    resolved_name = image_name or f'question_{question_index + 1}'
+                    if resolved_name and ('a' in resolved_name or 'b' in resolved_name):
+                        col1, col2 = st.columns(2)
+                        with col1:
+                            display_image(resolved_category, resolved_name, "")
+                    else:
+                        display_image(resolved_category, resolved_name, "")
+            except (ImportError, KeyError):
                 pass
 
-            st.markdown(f"**もんだい1: {questions[0]['q']}**")
-            answers[0] = render_option_buttons(questions[0]['options'], answers[0], "perio_q1")
+        st.markdown(f"<h3 style='font-size: 1.8em; margin: 20px 0;'>もんだい{question_index + 1}: {question.get('text', '')}</h3>", unsafe_allow_html=True)
+        answers[question_index] = render_option_buttons(
+            question.get('options', []),
+            answers[question_index],
+            f"perio_q{question_index}"
+        )
 
-            st.markdown("---")
-            submit_q1 = st.button(
-                "📝 こたえをかくにん",
-                key="perio_submit_q1",
-                type="primary",
-                use_container_width=True,
-            )
+        st.markdown("---")
+        submit_btn = st.button(
+            "📝 こたえをかくにん",
+            key=f"perio_submit_q{question_index}",
+            type="primary",
+            use_container_width=True,
+        )
 
-            if submit_q1:
-                if answers[0] is None:
-                    st.warning("こたえをえらんでね！")
+        if submit_btn:
+            if answers[question_index] is None:
+                st.warning("こたえをえらんでね！")
+            else:
+                correct_answer = question.get('correct', 0)
+                if answers[question_index] == correct_answer:
+                    feedback = question.get('correct_feedback', 'せいかい！')
+                    st.success(feedback)
                 else:
-                    if answers[0] == questions[0]['correct']:
-                        st.success("せいかい！ はみがきしないと はぐきから ちがでることが あるんだよ。")
-                    else:
-                        st.warning("ざんねん… はぐきから ちがでてしまうことがあるから ていねいにはみがきしようね。")
-                        st.info("✅ せいかいは『はぐき』だよ。")
-                    st.session_state.perio_q1_checked = True
+                    feedback = question.get('incorrect_feedback', 'ざんねん…')
+                    st.warning(feedback)
+                    explanation = question.get('explanation', '')
+                    if explanation:
+                        st.info(f"✅ {explanation}")
+                st.session_state[state_key_checked] = True
 
-            if st.session_state.get('perio_q1_checked'):
+        # 次の問題へ or 結果表示
+        if st.session_state.get(state_key_checked):
+            if question_index < len(questions) - 1:
+                # 次の問題へ
                 if st.button(
                     "▶️ つぎのもんだいへ",
-                    key="perio_next_q1",
+                    key=f"perio_next_q{question_index}",
                     type="secondary",
                     use_container_width=True,
                 ):
-                    st.session_state.pop('perio_q1_checked', None)
-                    st.session_state.perio_quiz_stage = 'question_1'
+                    st.session_state.pop(state_key_checked, None)
+                    st.session_state.perio_quiz_stage = f'question_{question_index + 1}'
                     st.rerun()
             else:
-                st.caption("こたえをかくにんしてから つぎへすすもう！")
-            return
-
-        if question_index == 1:
-            if 'perio_q2_selected' not in st.session_state:
-                st.session_state.perio_q2_selected = None
-            st.markdown("**問題2: もう一つの比較問題**")
-            try:
-                from services.image_helper import display_image
-                col3, col4 = st.columns(2)
-                with col3:
-                    display_image("quiz/periodontitis", "question_2a", "問題")
-                with col4:
-                    display_image("quiz/periodontitis", "question_2b", "はぐきの状態")
-            except ImportError:
-                pass
-
-            st.markdown(f"**もんだい2: {questions[1]['q']}**")
-            answers[1] = render_option_buttons(questions[1]['options'], answers[1], "perio_q2")
-
-            st.markdown("---")
-            submit_q2 = st.button(
-                "📝 こたえをかくにん",
-                key="perio_submit_q2",
-                type="primary",
-                use_container_width=True,
-            )
-
-            if submit_q2:
-                if answers[1] is None:
-                    st.warning("こたえをえらんでね！")
-                else:
-                    if answers[1] == questions[1]['correct']:
-                        st.success("せいかい！ はのねもとは ほねと はぐきで しっかり ささえられているよ。")
-                    else:
-                        st.warning("ざんねん… はのねもとは ほねと はぐきで ささえられているんだ。")
-                        st.info("✅ せいかいは『③』だよ。")
-                    st.session_state.perio_q2_checked = True
-
-            finalize_perio = False
-            if st.session_state.get('perio_q2_checked'):
-                finalize_perio = st.button(
-                    "▶️ つぎへ",
-                    key="perio_finalize_q2",
+                # 最終問題の場合、結果表示
+                if st.button(
+                    "▶次へすすむ",
+                    key=f"perio_finalize_q{question_index}",
                     type="secondary",
                     use_container_width=True,
-                )
-            else:
-                st.caption("こたえをかくにんしてから けっていしよう！")
+                ):
+                    st.session_state.pop(state_key_checked, None)
+                    
+                    if answers[question_index] is None:
+                        st.warning("こたえをえらんでね！")
+                        return
 
-            if finalize_perio:
-                st.session_state.pop('perio_q2_checked', None)
-                if answers[1] is None:
-                    st.warning("こたえをえらんでね！")
-                    return
+                    # 正解数をカウント
+                    correct_count = sum(
+                        1
+                        for i, q in enumerate(questions)
+                        if i < len(answers) and answers[i] == q.get('correct', 0)
+                    )
 
-                correct_count = sum(
-                    1
-                    for i, q in enumerate(questions)
-                    if i < len(answers) and answers[i] == q['correct']
-                )
+                    st.success(f"せいかいかず: {correct_count}/{len(questions)}")
 
-                st.success(f"せいかいかず: {correct_count}/{len(questions)}")
+                    # 各問題の結果表示
+                    for i, q in enumerate(questions):
+                        if i < len(answers):
+                            if answers[i] == q.get('correct', 0):
+                                st.success(f"もんだい{i+1}せいかい！ {q.get('explanation', '')}")
+                            else:
+                                st.warning(f"もんだい{i+1}は ざんねん… {q.get('explanation', '')}")
 
-                if answers[0] == questions[0]['correct']:
-                    st.success("もんだい1せいかい！ はみがきしないと はぐきから ちがでることが あるんだよ。")
-                else:
-                    st.warning("もんだい1は ざんねん… はぐきから ちがでてしまうことがあるから ていねいにはみがきしようね。")
+                    # 報酬とポジション更新
+                    if 'game_state' in st.session_state:
+                        game_state = st.session_state.game_state
+                        high_score = rewards.get('high_score', {})
+                        low_score = rewards.get('low_score', {})
+                        
+                        threshold = high_score.get('threshold', 1)
 
-                if answers[1] == questions[1]['correct']:
-                    st.info("もんだい2せいかい！ はのねもとは しっかり はぐきや ほねで ささえられているよ。")
-                else:
-                    st.info("もんだい2は もうすこし！ はのねもとは ほねと はぐきで ささえられているんだ。")
+                        if correct_count >= threshold:
+                            coins = high_score.get('coins', 5)
+                            position = high_score.get('position', 19)
+                            message = high_score.get('message', '🌟 よくできました！')
+                            
+                            game_state['tooth_coins'] += coins
+                            game_state['current_position'] = position
+                            st.success(message)
+                            st.balloons()
+                        else:
+                            coins = low_score.get('coins', -3)
+                            position = low_score.get('position', 17)
+                            message = low_score.get('message', '💧 もう少し頑張りましょう')
+                            
+                            game_state['tooth_coins'] = max(0, game_state['tooth_coins'] + coins)
+                            game_state['current_position'] = position
+                            st.warning(message)
+                        
+                        # クイズ完了フラグをセット（ループ防止）
+                        game_state['action_taken'] = True
+                        game_state['action_completed'] = True
 
-                if 'game_state' in st.session_state:
-                    game_state = st.session_state.game_state
-
-                    if correct_count >= 1:
-                        game_state['tooth_coins'] += 5
-                        st.success("🌟 よくできました！")
-                        st.balloons()
-                        game_state['current_position'] = 19
-                    else:
-                        game_state['tooth_coins'] = max(0, game_state['tooth_coins'] - 3)
-                        st.warning("💧 もうすこし べんきょうしようね")
-                        game_state['current_position'] = 17
-
-                st.session_state.perio_quiz_stage = 'intro'
-                st.session_state.pop('perio_quiz_answers', None)
-                st.session_state.pop('perio_q1_selected', None)
-                st.session_state.pop('perio_q2_selected', None)
-                st.session_state.pop('perio_q1_checked', None)
-                st.session_state.pop('perio_q2_checked', None)
-                st.info("つづきは ゲームボードで！")
-                navigate_to('game_board')
-            return
+                    # セッションステートをクリア
+                    st.session_state.perio_quiz_stage = 'intro'
+                    st.session_state.pop('perio_quiz_answers', None)
+                    for i in range(len(questions)):
+                        st.session_state.pop(f'perio_q{i}_selected', None)
+                        st.session_state.pop(f'perio_q{i}_checked', None)
+                    
+                    st.info("つづきは ゲームボードで！")
+                    navigate_to('game_board')
+        else:
+            st.caption("こたえをかくにんしてから つぎへすすもう！")
+        return
 
 def show_goal_page():
     """ゴール・ランキングページ"""
@@ -2004,19 +2458,19 @@ def show_image_test_page():
         st.subheader("1. ボードマス画像テスト")
         board_images = ["cell_01", "cell_02", "cell_03", "cell_04", "cell_05"]
         for cell_name in board_images:
-            display_image("board", cell_name, f"ボードマス画像: {cell_name}")
+            display_image("board", cell_name, "")
         
         # クイズ画像テスト
         st.subheader("2. クイズ画像テスト")
         
         # 虫歯クイズメイン画像
         st.markdown("**虫歯クイズ - メイン画像**")
-        display_image("quiz/caries", "main_image", "虫歯クイズメイン画像")
+        display_image("quiz/caries", "main_image", "")
         
         # 虫歯クイズ問題画像
         st.markdown("**虫歯クイズ - 問題画像**")
-        display_image("quiz/caries", "question_1", "虫歯クイズ問題1")
-        display_image("quiz/caries", "question_2", "虫歯クイズ問題2")
+        display_image("quiz/caries", "question_1", "")
+        display_image("quiz/caries", "question_2", "")
         
         # 食べ物選択肢（JPEG対応）
         st.markdown("**食べ物選択肢 (JPEG形式)**")
@@ -2024,7 +2478,7 @@ def show_image_test_page():
         cols = st.columns(4)
         for i, food in enumerate(food_items):
             with cols[i]:
-                display_image("quiz/caries/food", food, f"{food}")
+                display_image("quiz/caries/food", food, "")
         
         # 飲み物選択肢（JPEG対応）
         st.markdown("**飲み物選択肢 (JPEG形式)**")
@@ -2032,19 +2486,19 @@ def show_image_test_page():
         cols = st.columns(5)
         for i, drink in enumerate(drink_items):
             with cols[i]:
-                display_image("quiz/caries/drink", drink, f"{drink}")
+                display_image("quiz/caries/drink", drink, "")
         
         # 歯周病クイズ
         st.markdown("**歯周病クイズ**")
-        display_image("quiz/periodontitis", "main_image", "歯周病クイズメイン画像")
-        display_image("quiz/periodontitis", "question_1", "歯周病クイズ問題1")
-        display_image("quiz/periodontitis", "question_2", "歯周病クイズ問題2")
+        display_image("quiz/periodontitis", "main_image", "")
+        display_image("quiz/periodontitis", "question_1", "")
+        display_image("quiz/periodontitis", "question_2", "")
         
         # イベント画像テスト
         st.subheader("3. イベント画像テスト")
         event_images = ["self_introduction", "jump", "tooth_loss", "job_experience"]
         for event_name in event_images:
-            display_image("events", event_name, f"イベント画像: {event_name}")
+            display_image("events", event_name, "")
         
         # 定期検診画像テスト
         st.subheader("4. 定期検診画像テスト")
@@ -2052,7 +2506,7 @@ def show_image_test_page():
                          "professional_cleaning", "fluoride_treatment", 
                          "checkup_result", "importance"]
         for checkup_name in checkup_images:
-            display_image("checkup", checkup_name, f"定期検診画像: {checkup_name}")
+            display_image("checkup", checkup_name, "")
         
         st.success("すべての画像カテゴリをテストしました。上記で表示されない画像は、対応するファイルが assets/images/ フォルダにアップロードされていません。")
         
@@ -2071,6 +2525,18 @@ def show_image_test_page():
 
 # メインアプリケーション
 def main():
+    # ターミナルデバッグ出力
+    print(f"\n{'='*60}")
+    print(f"🔍 DEBUG: Current Page = {st.session_state.current_page}")
+    if 'game_state' in st.session_state:
+        game_state = st.session_state.game_state
+        print(f"🔍 DEBUG: Current Position = {game_state.get('current_position', 0)}")
+        print(f"� DEBUG: Tooth Coins = {game_state.get('tooth_coins', 10)}")
+        print(f"🔍 DEBUG: Teeth Count = {game_state.get('teeth_count', 20)}")
+    print(f"🔍 DEBUG: Game Board Stage = {st.session_state.get('game_board_stage', 'N/A')}")
+    print(f"🔍 DEBUG: Job Roulette State = {st.session_state.get('job_roulette_state', 'N/A')}")
+    print(f"{'='*60}\n")
+    
     # タイトル表示
     current_page_info = PAGE_FLOW.get(st.session_state.current_page, {'title': 'お口の人生ゲーム'})
     staff_mode = staff_access_enabled()
@@ -2083,12 +2549,12 @@ def main():
 
         # 歯のUI表示（一番上）- game_board以外は常に最初に表示
         if st.session_state.current_page != 'game_board':
-            hide_status_pages = {'caries_quiz', 'perio_quiz'}
+            hide_status_pages = {'caries_quiz', 'perio_quiz', 'job_experience'}
             if not caries_intro and st.session_state.current_page not in hide_status_pages:
                 show_status_header()
 
         # タイトルとプログレスバー
-        hide_progress_pages = {'game_board', 'checkup', 'perio_quiz', 'caries_quiz', 'goal', 'line_coloring'}
+        hide_progress_pages = {'game_board', 'checkup', 'perio_quiz', 'caries_quiz', 'goal', 'line_coloring', 'job_experience'}
         if st.session_state.current_page not in hide_progress_pages and not caries_intro:
             st.markdown(f"<h1 class='main-title'>{current_page_info['title']}</h1>", unsafe_allow_html=True)
             show_progress_bar()

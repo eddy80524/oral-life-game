@@ -1,0 +1,42 @@
+{
+  "title": "むしばクイズ（5さい未満）",
+  "questions": [
+    {
+      "id": "q1",
+      "text": "からだのなかで いちばんかたいものは？",
+      "image_category": "quiz/caries",
+      "image_name": "question_1",
+      "type": "single_choice",
+      "options": ["あたま", "せなか", "は"],
+      "correct": 2,
+      "explanation": "『は』は からだのなかで いちばんかたいんだよ。エナメルしつが つよいんだ。",
+      "correct_feedback": "せいかい！『は』は からだのなかで いちばんかたいんだよ。",
+      "incorrect_feedback": "ざんねん… いちばんかたいのは『は』だよ。エナメルしつが つよいんだ。"
+    },
+    {
+      "id": "q2",
+      "text": "ジュースをたくさん飲むとどうなる？",
+      "image_category": "quiz/caries",
+      "image_name": "question_2",
+      "type": "single_choice",
+      "options": ["むし歯になりやすい", "背がのびる", "歯がつよくなる"],
+      "correct": 0,
+      "explanation": "ジュースを飲みすぎると、お口の中のばい菌が「やったー！」って大よろこび！ むし歯になっちゃうかも。",
+      "correct_feedback": "せいかい！ ジュースを飲みすぎると、お口の中のばい菌が「やったー！」って大よろこび！ むし歯になっちゃうかも。",
+      "incorrect_feedback": "ざんねん… ジュースをたくさん飲むと『むし歯になりやすい』んだよ。"
+    }
+  ],
+  "rewards": {
+    "high_score": {
+      "threshold": 1,
+      "coins": 5,
+      "position": 10,
+      "message": "🌟 よくできました！ けんこうルートに すすみます！"
+    },
+    "low_score": {
+      "coins": -3,
+      "position": 7,
+      "message": "💧 もうすこし きをつけましょう。べつのルートに すすみます。"
+    }
+  }
+}

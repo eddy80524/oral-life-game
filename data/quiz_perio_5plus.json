@@ -1,0 +1,42 @@
+{
+  "title": "歯周病クイズ（5さい以上）",
+  "questions": [
+    {
+      "id": "q1",
+      "text": "歯みがきしないと どこから 血が出る？",
+      "image_category": "quiz/periodontitis",
+      "image_name": ["question_1a", "question_1b"],
+      "type": "single_choice",
+      "options": ["は", "はぐき", "した"],
+      "correct": 1,
+      "explanation": "はみがきしないと、はぐきから ちがでることがあるんだよ。",
+      "correct_feedback": "せいかい！はみがきしないと、はぐきから ちがでることがあるよ。",
+      "incorrect_feedback": "ざんねん…はみがきしないと『はぐき』から ちがでることがあるんだ。"
+    },
+    {
+      "id": "q2",
+      "text": "歯の 根っこの ところは どうなってる？",
+      "image_category": "quiz/periodontitis",
+      "image_name": "question_2b",
+      "type": "single_choice",
+      "options": ["①", "②", "③"],
+      "correct": 2,
+      "explanation": "歯の根っこは、歯ぐきや骨にしっかり支えられています。",
+      "correct_feedback": "正解！歯の根っこは、歯ぐきや骨にしっかり支えられているんだよ。",
+      "incorrect_feedback": "残念…正解は『③』だよ。歯の根っこは、歯ぐきや骨にしっかり支えられているんだ。"
+    }
+  ],
+  "rewards": {
+    "high_score": {
+      "threshold": 1,
+      "coins": 0,
+      "position": 20,
+      "message": "🌟 きれいな歯ぐきルートにすすみます！"
+    },
+    "low_score": {
+      "coins": 0,
+      "position": 18,
+      "message": "💧 歯ぐきをいたわろうルートにすすみます。"
+    }
+  }
+}

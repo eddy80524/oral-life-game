@@ -352,6 +352,7 @@ def lose_specific_teeth(game_state: Dict, tooth_ids: Iterable[str], *,
         if tooth and tooth.get("visible", True):
             tooth["status"] = "lost_permanent" if permanent else "lost_temp"
             tooth["permanent_loss"] = permanent
+            tooth["visible"] = False  # UI上で歯を非表示にする
             affected.append(tooth_id)
     sync_teeth_count(game_state)
     return affected

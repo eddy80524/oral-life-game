@@ -1,0 +1,40 @@
+{
+  "title": "むし歯クイズ（5さい以上）",
+  "questions": [
+    {
+      "id": "q1",
+      "text": "からだのなかで いちばんかたいものは？",
+      "image_category": "quiz/caries",
+      "image_name": "question_1",
+      "type": "single_choice",
+      "options": ["あたま", "せなか", "は"],
+      "correct": 2,
+      "explanation": "『は』は からだのなかで いちばんかたいんだよ。エナメルしつが つよいんだ。",
+      "correct_feedback": "せいかい！『は』は からだのなかで いちばんかたいんだよ。",
+      "incorrect_feedback": "ざんねん… いちばんかたいのは『は』だよ。エナメルしつが つよいんだ。"
+    },
+    {
+      "id": "q2",
+      "text": "むし歯のバイキンは、なにを食べて大きくなる？",
+      "type": "single_choice",
+      "options": ["すっぱいもの", "あまいもの", "しおからいもの"],
+      "correct": 1,
+      "explanation": "みんながおかしやジュースを食べると、その食べかすが歯にくっつきます。むし歯バイキンは、この食べかすの中に含まれているさとうをパクパク食べて大きくなるんだ。",
+      "correct_feedback": "正解！むし歯バイキンは、さとう（あまいもの）を食べて大きくなるよ。",
+      "incorrect_feedback": "残念…むし歯バイキンは『あまいもの』を食べて大きくなるんだ。"
+    }
+  ],
+  "rewards": {
+    "high_score": {
+      "threshold": 1,
+      "coins": 0,
+      "position": 8,
+      "message": "🌟 すごい！フロスができるコースにすすみます！"
+    },
+    "low_score": {
+      "coins": 0,
+      "position": 6,
+      "message": "💧 もう少し気をつけよう。むし歯ルートにすすみます。"
+    }
+  }
+}

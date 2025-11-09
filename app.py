@@ -1064,6 +1064,16 @@ def show_game_board_page():
             limit = max_reachable
 
         allowed = list(range(1, limit + 1))
+        
+        # 5歳未満モードでcell 13（野菜ジュース開発）をスキップする処理
+        participant_age = st.session_state.get('participant_age', 5)
+        if participant_age < 5:
+            # cell 11（夜更かし）にいる場合、2を除外（cell 13に到達しないように）
+            if position == 11 and 2 in allowed:
+                allowed.remove(2)
+            # cell 12（定期検診2）にいる場合、1を除外（cell 13に到達しないように）
+            elif position == 12 and 1 in allowed:
+                allowed.remove(1)
 
         return allowed, next_stop_distance, distance_to_goal
 
@@ -1838,7 +1848,7 @@ def show_caries_quiz_page():
                         
                         if correct_count >= threshold:
                             coins = high_score.get('coins', 5)
-                            position = high_score.get('position', 10)
+                            position = 8  # cell 8: フロス習得（正解ルート）
                             message = high_score.get('message', '🌟 よくできました！')
                             
                             game_state['tooth_coins'] += coins
@@ -1846,16 +1856,16 @@ def show_caries_quiz_page():
                             st.success(message)
                         else:
                             coins = low_score.get('coins', -3)
-                            position = low_score.get('position', 7)
+                            position = 6  # cell 6: むし歯ができた（不正解ルート）
                             message = low_score.get('message', '💧 もう少し頑張りましょう')
                             
                             game_state['tooth_coins'] = max(0, game_state['tooth_coins'] + coins)
                             game_state['current_position'] = position
                             st.warning(message)
                         
-                        # クイズ完了フラグをセット（ループ防止）
-                        game_state['action_taken'] = True
-                        game_state['action_completed'] = True
+                        # クイズ完了後はaction_takenをFalseにして、分岐マスでルーレットを表示できるようにする
+                        game_state['action_taken'] = False
+                        game_state['action_completed'] = False
                     
                     st.info("つづきは ゲームボードで！")
                     

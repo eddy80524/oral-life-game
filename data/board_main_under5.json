@@ -60,6 +60,8 @@
     "image": "board/simple/cell_06",
     "audio_id": "adult_teeth",
     "next_action": "caries_quiz",
+    "branch_fail": 6,
+    "branch_pass": 8,
     "display_label": "6"
   },
   {

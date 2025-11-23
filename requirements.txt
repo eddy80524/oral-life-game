@@ -2,10 +2,9 @@ streamlit>=1.39.0
 numpy
 pandas
 pyyaml
+firebase-admin>=6.0.0
 
 # 将来の音声機能用（現在は未使用）
 # pydub
 # gTTS
 
-# 将来のクラウド保存用（現在は未使用）
-# pyrebase4

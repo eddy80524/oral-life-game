@@ -1,12 +1,12 @@
 """
-データ保存サービス（ローカルJSON）
-将来Firebase Firestoreに切り替え可能
+データ保存サービス（Firebase Firestore優先、ローカルJSON Fallback）
 """
 import json
 import os
 from datetime import datetime
 from typing import List, Dict, Optional
 import streamlit as st
+from services.firebase import get_firebase_service
 
 # データファイルのパス
 LEADERBOARD_FILE = "data/leaderboard.json"
@@ -39,7 +39,19 @@ def ensure_data_files():
             json.dump([], f, ensure_ascii=False, indent=2)
 
 def save_score(player_data: Dict) -> bool:
-    """スコアをリーダーボードに保存"""
+    """スコアをリーダーボードに保存（Firebase優先、ローカルJSONフォールバック）"""
+    # Firebase に保存を試みる
+    firebase = get_firebase_service()
+    firebase_success = firebase.save_player_score(player_data)
+    
+    # Firebase 保存に成功した場合は、ローカルにもバックアップ
+    # 失敗した場合は、ローカルのみ保存
+    if firebase_success:
+        print("✓ Score saved to Firebase")
+    else:
+        print("⚠ Firebase unavailable, using local JSON")
+    
+    # ローカルJSONにも保存（バックアップ）
     try:
         ensure_data_files()
         
@@ -72,22 +84,40 @@ def save_score(player_data: Dict) -> bool:
         
         return True
     except Exception as e:
-        st.error(f"スコア保存エラー: {e}")
-        return False
+        print(f"Local JSON save error: {e}")
+        return firebase_success
 
 def load_leaderboard(top_n: int = 5) -> List[Dict]:
-    """リーダーボードを読み込み"""
+    """リーダーボードを読み込み（Firebase優先、ローカルJSONフォールバック）"""
+    # Firebase から読み込みを試みる
+    firebase = get_firebase_service()
+    leaderboard = firebase.get_leaderboard(limit=top_n)
+    
+    if leaderboard:
+        print(f"✓ Loaded {len(leaderboard)} scores from Firebase")
+        return leaderboard
+    
+    # Firebase から読み込めなかった場合、ローカルJSONを使用
+    print("⚠ Firebase unavailable, using local JSON")
     try:
         ensure_data_files()
         with open(LEADERBOARD_FILE, 'r', encoding='utf-8') as f:
-            leaderboard = json.load(f)
-        return leaderboard[:top_n]
+            local_data = json.load(f)
+        return local_data[:top_n]
     except Exception as e:
-        st.error(f"リーダーボード読み込みエラー: {e}")
+        print(f"Local JSON read error: {e}")
         return []
 
 def increment_participant_count() -> int:
-    """参加者数をインクリメント"""
+    """参加者数をインクリメント（Firebase優先、ローカルJSONフォールバック）"""
+    # Firebase に保存を試みる
+    firebase = get_firebase_service()
+    firebase_count = firebase.increment_participant_count()
+    
+    if firebase_count > 0:
+        print(f"✓ Participant count incremented to {firebase_count} (Firebase)")
+    
+    # ローカルJSONにもバックアップ
     try:
         ensure_data_files()
         
@@ -106,10 +136,10 @@ def increment_participant_count() -> int:
         with open(PARTICIPANTS_FILE, 'w', encoding='utf-8') as f:
             json.dump(data, f, ensure_ascii=False, indent=2)
         
-        return data["total_count"]
+        return firebase_count if firebase_count > 0 else data["total_count"]
     except Exception as e:
-        st.error(f"参加者カウントエラー: {e}")
-        return 0
+        print(f"Local JSON increment error: {e}")
+        return firebase_count if firebase_count > 0 else 0
 
 def get_participant_stats() -> Dict:
     """参加者統計を取得"""

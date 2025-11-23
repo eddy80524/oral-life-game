@@ -49,5 +49,22 @@
     "caries_correct": 0,
     "perio_correct": 0,
     "final_position": 23
+  },
+  {
+    "timestamp": "2025-11-23T14:27:41.941068",
+    "session_id": "357a7778-02dc-45ce-bc28-d8799516e24b",
+    "participant_name": "テスト",
+    "participant_age": 5,
+    "age_group": "5plus",
+    "board": "5plus",
+    "teeth_count": 20,
+    "tooth_coins": 17500,
+    "turn_count": 3,
+    "play_time": "0分47秒",
+    "start_time": "2025-11-23T14:26:53.965456",
+    "reached_goal": true,
+    "caries_correct": 0,
+    "perio_correct": 0,
+    "final_position": 29
   }
 ]

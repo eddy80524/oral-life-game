@@ -5,9 +5,16 @@
       "id": "q1",
       "text": "はみがきしないと どこから ちがでる？",
       "image_category": "quiz/periodontitis",
-      "image_name": ["question_1a", "question_1b"],
+      "image_name": [
+        "question_1a",
+        "question_1b"
+      ],
       "type": "single_choice",
-      "options": ["は", "はぐき", "した"],
+      "options": [
+        "は",
+        "はぐき",
+        "した"
+      ],
       "correct": 1,
       "explanation": "はみがきしないと、はぐきから ちがでることがあるんだよ。",
       "correct_feedback": "せいかい！はみがきしないと、はぐきから ちがでることがあるよ。",
@@ -17,7 +24,11 @@
       "id": "q2",
       "text": "はぐきから ちがでたら どうする？",
       "type": "single_choice",
-      "options": ["そのままにする", "やさしくみがいて、おとなにはなす", "なめてがまんする"],
+      "options": [
+        "そのままにする",
+        "やさしくみがいて、おとなにはなす",
+        "なめてがまんする"
+      ],
       "correct": 1,
       "explanation": "はぐきから ちがでるのは、『ばいきんが はいりこんで はぐきが びっくりしてるよ！』というサインなんだ。そのままにしたり、なめてがまんしたりすると、ばいきんが ふえて もっとわるくなることも😢",
       "correct_feedback": "せいかい！やさしくみがいて、おとなにはなすのが いちばんだよ。",
@@ -28,12 +39,12 @@
     "high_score": {
       "threshold": 1,
       "coins": 5,
-      "position": 19,
+      "position": 24,
       "message": "🌟 すごいね！けんこうルートにすすむよ！"
     },
     "low_score": {
       "coins": -3,
-      "position": 17,
+      "position": 21,
       "message": "💧 もうすこし べんきょうしよう。べつの ルートにすすむよ。"
     }
   }

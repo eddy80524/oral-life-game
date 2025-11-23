@@ -22,6 +22,98 @@ from services.store import log_player_session  # noqa: E402
 
 ensure_video_directories()
 
+# -----------------------------------------------------------------------------
+# State Persistence Helpers
+# -----------------------------------------------------------------------------
+def save_state_to_url():
+    """Save critical game state to URL parameters for persistence across reloads."""
+    if 'game_state' not in st.session_state:
+        return
+
+    gs = st.session_state.game_state
+    params = {
+        'page': st.session_state.current_page,
+        'pos': gs.get('current_position', 0),
+        'teeth': gs.get('teeth_count', 20),
+        'coins': gs.get('tooth_coins', 10000),
+        'age': st.session_state.get('participant_age', 5),
+        'name': st.session_state.get('participant_name', ''),
+        'p_quiz': st.session_state.get('post_quiz_full_teeth', False),
+        'job': st.session_state.get('job_experience_completed', False),
+    }
+    
+    # Save quiz state if in quiz pages
+    current_page = st.session_state.current_page
+    if current_page == 'caries_quiz':
+        params['quiz_stage'] = st.session_state.get('caries_quiz_stage', 'intro')
+    elif current_page == 'perio_quiz':
+        params['quiz_stage'] = st.session_state.get('perio_quiz_stage', 'intro')
+    
+    # Convert bools to strings
+    for k, v in params.items():
+        if isinstance(v, bool):
+            params[k] = str(v).lower()
+            
+    st.query_params.update(params)
+
+def load_state_from_url():
+    """Load game state from URL parameters if session state is empty."""
+    # Only load if we are not already in a valid session (or if we just reloaded)
+    # We check if 'game_state' is missing or if we are at 'reception' but params exist
+    
+    try:
+        params = st.query_params
+        if not params:
+            return
+
+        # If we have 'pos' in params, it implies an active game
+        if 'pos' in params:
+            from services.game_logic import initialize_game_state
+            initialize_game_state()
+            
+            gs = st.session_state.game_state
+            
+            # Restore values
+            gs['current_position'] = int(params.get('pos', 0))
+            gs['teeth_count'] = int(params.get('teeth', 20))
+            gs['tooth_coins'] = int(params.get('coins', 10000))
+            
+            st.session_state.current_page = params.get('page', 'reception')
+            st.session_state.participant_age = int(params.get('age', 5))
+            st.session_state.participant_name = params.get('name', '')
+            
+            # Restore bool flags
+            if params.get('p_quiz') == 'true':
+                st.session_state.post_quiz_full_teeth = True
+            if params.get('job') == 'true':
+                st.session_state.job_experience_completed = True
+            
+            # Restore quiz state if applicable
+            if 'quiz_stage' in params:
+                quiz_stage = params.get('quiz_stage')
+                current_page = st.session_state.current_page
+                if current_page == 'caries_quiz':
+                    st.session_state.caries_quiz_stage = quiz_stage
+                elif current_page == 'perio_quiz':
+                    st.session_state.perio_quiz_stage = quiz_stage
+                
+            # Sync session state mirrors
+            st.session_state.teeth_count = gs['teeth_count']
+            st.session_state.tooth_coins = gs['tooth_coins']
+            
+            # Ensure tooth chart matches count (simplified restoration)
+            teeth_service.ensure_tooth_state(gs)
+            if gs['teeth_count'] == 28:
+                 teeth_service.reset_all_teeth_to_healthy(gs)
+            
+            # If we are on game_board, ensure stage is set
+            if st.session_state.current_page == 'game_board':
+                st.session_state.game_board_stage = 'card'
+
+    except Exception as e:
+        print(f"Error loading state from URL: {e}")
+
+
 # ページ設定
 st.set_page_config(
     page_title="お口の人生ゲーム",
@@ -468,7 +560,9 @@ st.markdown("""
 
 # ページ管理用の状態初期化
 if 'current_page' not in st.session_state:
-    st.session_state.current_page = 'reception'
+    load_state_from_url()  # Try to load from URL first
+    if 'current_page' not in st.session_state:
+        st.session_state.current_page = 'reception'
 
 # ページ進行状況の定義
 PAGE_FLOW = {
@@ -602,11 +696,13 @@ def apply_tooth_effects(game_state, landing_cell, feedback):
 
     teeth_service.sync_teeth_count(game_state)
     st.session_state.teeth_count = game_state.get('teeth_count', st.session_state.get('teeth_count', 0))
+    save_state_to_url()  # Save state after effects
     return effect_applied
 
 def navigate_to(page_name):
     """ページ遷移"""
     st.session_state.current_page = page_name
+    save_state_to_url()  # Save state on navigation
     st.rerun()
 
 def show_progress_bar():
@@ -1109,7 +1205,7 @@ def show_game_board_page():
             label = board_data[position].get('display_label')
             if label:
                 return str(label)
-        return str(position + 1)
+        return str(position)
 
     def process_spin_result(result_value: int):
         # 最新の位置を取得
@@ -1250,9 +1346,14 @@ def show_game_board_page():
                             feedback['landing_message'] = "🏥 はいしゃさんのマスにとうちゃく！"
                             feedback['landing_tone'] = 'success'
                             feedback['next_page'] = next_action
-                    else:
                         feedback['landing_message'] = "🏥 はいしゃさんのマスにとうちゃく！"
                         feedback['landing_tone'] = 'success'
+                elif landing_cell.get('coupon_url'):
+                    # クーポンマスの処理
+                    coupon_url = landing_cell.get('coupon_url')
+                    feedback['landing_message'] = "🎟️ クーポンをゲット！"
+                    feedback['landing_tone'] = 'success'
+                    feedback['coupon_url'] = coupon_url
                 elif '職業' in landing_title:
                     if st.session_state.participant_age >= 5:
                         feedback['landing_message'] = "👩‍⚕️ おしごとたいけんのマスにとうちゃく！"
@@ -1332,6 +1433,34 @@ def show_game_board_page():
                         st.warning(landing_message)
                     else:
                         st.info(landing_message)
+
+                
+                # クーポン表示
+                if recent_feedback.get('coupon_url'):
+                    st.markdown(f"""
+                    <div style="text-align: center; margin: 20px 0;">
+                        <a href="{recent_feedback.get('coupon_url')}" target="_blank" style="text-decoration: none;">
+                            <button style="
+                                background-color: #FF4B4B;
+                                color: white;
+                                padding: 15px 32px;
+                                text-align: center;
+                                text-decoration: none;
+                                display: inline-block;
+                                font-size: 16px;
+                                margin: 4px 2px;
+                                cursor: pointer;
+                                border: none;
+                                border-radius: 12px;
+                                box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+                            ">
+                                🎟️ クーポンをつかう
+                            </button>
+                        </a>
+                        <p style="font-size: 0.8em; color: #666;">※新しいタブで開きます</p>
+                    </div>
+                    """, unsafe_allow_html=True)
+
             st.session_state.pop('roulette_feedback', None)
             st.session_state.pop('roulette_last_spin_id', None)
             if current_cell is None:
@@ -1340,15 +1469,37 @@ def show_game_board_page():
 
             total_cells = len(board_data)
             if total_cells:
-                nodes_html = []
+                # 論理的なステップ（表示ラベル）のユニークなリストを作成
+                logical_steps = []
+                seen_labels = set()
+                
+                # 現在位置のラベルを取得
+                current_label = get_display_label(current_position)
+                
+                # 全セルのラベルを順に取得し、ユニークなステップリストを作成
                 for idx in range(total_cells):
-                    classes = ["board-progress-node"]
-                    if idx == current_position:
-                        classes.append("is-current")
-                    elif idx < current_position:
-                        classes.append("is-visited")
                     label = get_display_label(idx)
+                    if label not in seen_labels:
+                        logical_steps.append(label)
+                        seen_labels.add(label)
+                
+                nodes_html = []
+                current_step_found = False
+                
+                for label in logical_steps:
+                    classes = ["board-progress-node"]
+                    
+                    # 現在のステップかどうかの判定
+                    is_current = (label == current_label)
+                    
+                    if is_current:
+                        classes.append("is-current")
+                        current_step_found = True
+                    elif not current_step_found:
+                        classes.append("is-visited")
+                        
                     nodes_html.append(f"<div class='{' '.join(classes)}'>{label}</div>")
+                    
                 st.markdown(
                     f"<div class='board-progress-track'>{''.join(nodes_html)}</div>",
                     unsafe_allow_html=True,
@@ -1363,36 +1514,7 @@ def show_game_board_page():
             if not skip_media:
                 render_cell_media(current_position, current_cell)
 
-            special_event_ui = {
-                '初めて乳歯が抜けた': {
-                    'emoji': '👶',
-                    'headline': '乳歯がぬけたよ！',
-                    'body': '大人の歯が生えてくる準備ができたみたい。やさしくうがいをして、新しい歯を待とうね。'
-                }
-            }
-            if title in special_event_ui:
-                highlight = special_event_ui[title]
-                st.markdown(
-                    f"""
-                    <div style="
-                        background: linear-gradient(135deg, #FFF8F0, #FFE5D4);
-                        border: 2px solid #f3c9a9;
-                        border-radius: 16px;
-                        padding: 16px;
-                        margin: 10px 0 6px;
-                        box-shadow: 0 4px 10px rgba(0,0,0,0.08);
-                    ">
-                        <div style="font-size: 2rem; line-height: 1;">{highlight['emoji']}</div>
-                        <div style="font-weight: 700; color: #c25b2a; margin: 4px 0 6px;">
-                            {highlight['headline']}
-                        </div>
-                        <div style="color: #6b3d25; line-height: 1.5; font-size: 0.95rem;">
-                            {highlight['body']}
-                        </div>
-                    </div>
-                    """,
-                    unsafe_allow_html=True,
-                )
+
 
             cell_type = current_cell.get('type', 'normal')
             action_taken = False
@@ -1401,10 +1523,14 @@ def show_game_board_page():
                 quiz_type = current_cell.get('quiz_type', '')
                 if quiz_type == 'caries':
                     if st.button("🦷 むしばクイズにちょうせん！", use_container_width=True, type="primary"):
+                        st.session_state.caries_quiz_stage = 'question_0'
+                        st.session_state.caries_quiz_answers = [None] * 5 # Initialize with safe size, will be resized if needed
                         navigate_to('caries_quiz')
                         action_taken = True
-                elif quiz_type == 'periodontitis':
+                elif quiz_type == 'perio':
                     if st.button("🦷 はぐきのクイズにちょうせん！", use_container_width=True, type="primary"):
+                        st.session_state.perio_quiz_stage = 'question_0'
+                        st.session_state.perio_quiz_answers = [None] * 5
                         navigate_to('perio_quiz')
                         action_taken = True
             next_action = current_cell.get('next_action') or current_cell.get('route')
@@ -1471,102 +1597,8 @@ def show_game_board_page():
                 action_taken = True
 
             elif cell_type == 'event':
-                # イベント専用のアクションボタンを持つイベント
-                event_button_text = {
-                    '初めて言葉を話せるようになった': '🗣️ じこしょうかいをする',
-                    'ジャンプができるようになった': '🤸 ジャンプをする',
-                    '初めて乳歯が抜けた': '🦷 はのおはなしをする',
-                    '自己紹介': '🗣️ じこしょうかいをする',
-                    'ジャンプができた': '🤸 ジャンプをする',
-                    '乳歯が抜けた': '🦷 はのおはなしをする'
-                }
-                
-                # イベント完了フラグをチェック
-                event_completed_key = f'event_completed_{current_position}'
-                
-                if title in event_button_text and not st.session_state.get(event_completed_key, False):
-                    # すべてのイベントボタンをセカンダリーに
-                    if st.button(event_button_text[title], use_container_width=True, type='secondary', key=f'event_action_{current_position}'):
-                        # ジャンプイベントの場合
-                        if 'ジャンプ' in title:
-                            st.markdown("""
-                            <style>
-                            @keyframes jumpAnimation {
-                                0%, 100% { transform: translateY(0); }
-                                25% { transform: translateY(-30px); }
-                                50% { transform: translateY(0); }
-                                75% { transform: translateY(-15px); }
-                            }
-                            .jump-emoji {
-                                font-size: 4rem;
-                                display: inline-block;
-                                animation: jumpAnimation 1s ease-in-out 3;
-                            }
-                            </style>
-                            <div style='text-align:center; padding: 2rem 0;'>
-                                <div class='jump-emoji'>🤸</div>
-                                <p style='font-size: 1.5rem; color: #4CAF50; margin-top: 1rem;'>すごい！ジャンプできたね！</p>
-                            </div>
-                            """, unsafe_allow_html=True)
-                            time.sleep(3)
-                        # 自己紹介イベントの場合
-                        elif '言葉' in title or '自己紹介' in title:
-                            st.markdown("""
-                            <style>
-                            @keyframes waveAnimation {
-                                0%, 100% { transform: rotate(0deg); }
-                                10% { transform: rotate(14deg); }
-                                20% { transform: rotate(-8deg); }
-                                30% { transform: rotate(14deg); }
-                                40% { transform: rotate(-4deg); }
-                                50% { transform: rotate(10deg); }
-                                60% { transform: rotate(0deg); }
-                            }
-                            .wave-emoji {
-                                font-size: 4rem;
-                                display: inline-block;
-                                transform-origin: 70% 70%;
-                                animation: waveAnimation 1s ease-in-out 3;
-                            }
-                            </style>
-                            <div style='text-align:center; padding: 2rem 0;'>
-                                <div class='wave-emoji'>🗣️</div>
-                                <p style='font-size: 1.5rem; color: #4CAF50; margin-top: 1rem;'>すてきなじこしょうかいができたね！</p>
-                            </div>
-                            """, unsafe_allow_html=True)
-                            time.sleep(3)
-                        # 歯のおはなしイベントの場合
-                        elif '乳歯' in title or 'はのおはなし' in title:
-                            st.markdown("""
-                            <style>
-                            @keyframes sparkleAnimation {
-                                0%, 100% { transform: scale(1) rotate(0deg); opacity: 1; }
-                                25% { transform: scale(1.2) rotate(5deg); opacity: 0.8; }
-                                50% { transform: scale(1) rotate(-5deg); opacity: 1; }
-                                75% { transform: scale(1.2) rotate(5deg); opacity: 0.8; }
-                            }
-                            .sparkle-emoji {
-                                font-size: 4rem;
-                                display: inline-block;
-                                animation: sparkleAnimation 1s ease-in-out 3;
-                            }
-                            </style>
-                            <div style='text-align:center; padding: 2rem 0;'>
-                                <div class='sparkle-emoji'>🦷✨</div>
-                                <p style='font-size: 1.5rem; color: #4CAF50; margin-top: 1rem;'>はのおはなし、ありがとう！</p>
-                            </div>
-                            """, unsafe_allow_html=True)
-                            time.sleep(3)
-                        # イベント完了フラグを立てる
-                        st.session_state[event_completed_key] = True
-                        st.rerun()
-                elif st.session_state.get(event_completed_key, False):
-                    # イベント完了後はaction_takenをFalseにしてルーレットを表示可能にする
-                    action_taken = False
-                    st.success('たのしい たいけんでした！')
-                else:
-                    # ボタンがない通常のイベントの場合
-                    action_taken = False
+                # 通常のイベントは特別なアクションなし
+                action_taken = False
 
             # cell_15 (next_action='periodontitis_quiz') の場合は、action_taken=Trueでもルーレットを表示
             next_action = current_cell.get('next_action', '')
@@ -1574,7 +1606,7 @@ def show_game_board_page():
             
             can_spin = ((not action_taken or is_completed_checkup) 
                         and cell_type not in {'quiz', 'job_experience'}
-                        and not (cell_type == 'stop' and next_action != 'periodontitis_quiz')
+                        and not (cell_type == 'stop' and next_action and next_action != 'periodontitis_quiz')
                         and '職業' not in title and 'おしごと' not in title and 'お仕事' not in title
                         and current_position < max_position_index)
             
@@ -1699,7 +1731,7 @@ def show_caries_quiz_page():
     if stage == 'intro':
         st.markdown(f"### 🦷 {quiz_data.get('title', 'むしばクイズ')}")
         try:
-            display_image("board", "cell_06", "")
+            display_image("board", "cell_07", "")
         except ImportError:
             st.markdown("カードを確認したかな？むしばについてのクイズに備えてね。")
         if st.button("🦷 クイズへすすむ", type="primary", use_container_width=True):
@@ -1751,15 +1783,33 @@ def show_caries_quiz_page():
         st.markdown(f"{question.get('text', '')}</h3>", unsafe_allow_html=True)
         
         # 画像表示
+        images = question.get('images', [])  # Support multiple images
         image_category = question.get('image_category')
         image_name = question.get('image_name')
-        if image_category or image_name:
+        
+        # Single image from legacy fields
+        if (image_category or image_name) and not images:
+            images = [{'category': image_category or 'quiz/caries', 'name': image_name or f'question_{question_index + 1}'}]
+        
+        if images and len(images) > 0:
             try:
-                display_image(
-                    image_category or 'quiz/caries',
-                    image_name or f'question_{question_index + 1}',
-                    f"問題{question_index + 1}の画像",
-                )
+                if len(images) == 1:
+                    # Center single image
+                    display_image(
+                        images[0].get('category', 'quiz/caries'),
+                        images[0].get('name', f'question_{question_index + 1}'),
+                        f"問題{question_index + 1}の画像",
+                    )
+                else:
+                    # Multiple images in columns
+                    cols = st.columns(len(images))
+                    for idx, img in enumerate(images):
+                        with cols[idx]:
+                            display_image(
+                                img.get('category', 'quiz/caries'),
+                                img.get('name', f'question_{question_index + 1}_{idx + 1}'),
+                                f"問題{question_index + 1}の画像{idx + 1}",
+                            )
             except (ImportError, KeyError):
                 pass
 
@@ -1810,6 +1860,7 @@ def show_caries_quiz_page():
                 ):
                     st.session_state.pop(state_key_checked, None)
                     st.session_state.caries_quiz_stage = f'question_{question_index + 1}'
+                    save_state_to_url()
                     st.rerun()
             else:
                 # 最終問題の場合、結果表示
@@ -1862,6 +1913,23 @@ def show_caries_quiz_page():
                             game_state['tooth_coins'] = max(0, game_state['tooth_coins'] + coins)
                             game_state['current_position'] = position
                             st.warning(message)
+                        
+                        # Tooth transition: 20 (baby teeth) -> 28 (adult teeth)
+                        # This simulates the natural transition from baby teeth to adult teeth
+                        st.info("🦷 **おとなのはに はえかわったよ！** 20ほん → 28ほん")
+                        
+                        # Upgrade to adult teeth (28 teeth)
+                        from services import teeth as teeth_service
+                        teeth_service.ensure_tooth_state(game_state)
+                        if teeth_service.upgrade_to_adult(game_state):
+                            # Reset all teeth to healthy state with 28 teeth
+                            teeth_service.reset_all_teeth_to_healthy(game_state)
+                            game_state['teeth_count'] = 28
+                            game_state['teeth_max'] = 28
+                            game_state['teeth_missing'] = 0
+                            st.session_state.teeth_count = 28
+                            st.session_state.post_quiz_full_teeth = True
+                            st.balloons()
                         
                         # クイズ完了後はaction_takenをFalseにして、分岐マスでルーレットを表示できるようにする
                         game_state['action_taken'] = False
@@ -2263,12 +2331,7 @@ def show_perio_quiz_page():
         st.markdown(f"### 🦷 {quiz_data.get('title', 'はぐきクイズ')}")
         st.caption("カードをよんだら、ボタンをおしてクイズにすすもう！")
         try:
-            # 5さいみまんの場合はcell_15.pngを表示
-            if participant_age < 5:
-                st.image("assets/images/board/simple/cell_15.png", use_container_width=True)
-            else:
-                # 5歳以上の場合はcell_16.pngを表示
-                st.image("assets/images/board/cell_16.png", use_container_width=True)
+            display_image("board", "cell_20", "", use_container_width=True)
         except ImportError:
             st.info("カードをよんで はぐきクイズのじゅんびをしよう。")
         if st.button("🦷 クイズへすすむ", type="primary", use_container_width=True):
@@ -2324,25 +2387,38 @@ def show_perio_quiz_page():
             st.session_state[state_key_selected] = None
         
         # 問題の画像表示
+        images = question.get('images', [])  # Support multiple images
         image_category = question.get('image_category')
         image_name = question.get('image_name')
-        if image_category or image_name:
+        
+        # Handle legacy single image or list of image names
+        if not images:
+            if isinstance(image_name, list):
+                # Convert list of names to images format
+                images = [{'category': image_category or 'quiz/periodontitis', 'name': name} for name in image_name]
+            elif image_category or image_name:
+                # Single image from legacy fields
+                images = [{'category': image_category or 'quiz/periodontitis', 'name': image_name or f'question_{question_index + 1}'}]
+        
+        if images and len(images) > 0:
             try:
-                resolved_category = image_category or 'quiz/periodontitis'
-                # image_nameが配列の場合は複数画像を並べて表示
-                if isinstance(image_name, list):
-                    cols = st.columns(len(image_name))
-                    for idx, img_name in enumerate(image_name):
-                        with cols[idx]:
-                            display_image(resolved_category, img_name, "")
+                if len(images) == 1:
+                    # Center single image
+                    display_image(
+                        images[0].get('category', 'quiz/periodontitis'),
+                        images[0].get('name', f'question_{question_index + 1}'),
+                        f"問題{question_index + 1}の画像",
+                    )
                 else:
-                    resolved_name = image_name or f'question_{question_index + 1}'
-                    if resolved_name and ('a' in resolved_name or 'b' in resolved_name):
-                        col1, col2 = st.columns(2)
-                        with col1:
-                            display_image(resolved_category, resolved_name, "")
-                    else:
-                        display_image(resolved_category, resolved_name, "")
+                    # Multiple images in columns
+                    cols = st.columns(len(images))
+                    for idx, img in enumerate(images):
+                        with cols[idx]:
+                            display_image(
+                                img.get('category', 'quiz/periodontitis'),
+                                img.get('name', f'question_{question_index + 1}_{idx + 1}'),
+                                f"問題{question_index + 1}の画像{idx + 1}",
+                            )
             except (ImportError, KeyError):
                 pass
 
@@ -2389,6 +2465,7 @@ def show_perio_quiz_page():
                 ):
                     st.session_state.pop(state_key_checked, None)
                     st.session_state.perio_quiz_stage = f'question_{question_index + 1}'
+                    save_state_to_url()
                     st.rerun()
             else:
                 # 最終問題の場合、結果表示
@@ -2499,23 +2576,109 @@ def _build_session_record(game_state: dict) -> Dict[str, any]:
 
 def show_goal_page():
     """ゴール・ランキングページ"""
+    from services.store import load_leaderboard, save_score
+    
     st.markdown("### 🏁 ゲームクリア！")
+    
+    player_rank = None
+    player_score = 0
     
     if 'game_state' in st.session_state:
         game_state = st.session_state.game_state
+        
+        # Save session log
         if not st.session_state.get('session_log_saved'):
             record = _build_session_record(game_state)
             if log_player_session(record):
                 st.session_state.session_log_saved = True
         
-        col1, col2 = st.columns(2)
+        # Display player's results prominently
+        st.markdown("---")
+        st.markdown("### 🎉 あなたのけっか")
+        
+        col1, col2, col3 = st.columns(3)
+        teeth_count = game_state.get('teeth_count', 20)
+        coins = game_state.get('tooth_coins', 10000)
+        player_score = teeth_count * 10 + coins
+        
         with col1:
-            st.metric("さいしゅうはのかず", f"{game_state.get('teeth_count', 20)}ほん")
+            st.metric("さいしゅうはのかず", f"{teeth_count}ほん")
         with col2:
-            st.metric("トゥースコイン", f"{game_state.get('tooth_coins', 10)}まい")
+            st.metric("トゥースコイン", f"{coins}まい")
+        with col3:
+            st.metric("ごうけいスコア", f"{player_score}てん")
+        
+        st.success("おめでとう！")
+        
+        # Save to leaderboard if not already saved
+        if not st.session_state.get('score_saved'):
+            player_data = {
+                "player_name": st.session_state.get('participant_name', '匿名'),
+                "age_group": "under5" if st.session_state.get('participant_age', 5) < 5 else "5plus",
+                "teeth_count": teeth_count,
+                "tooth_coins": coins,
+                "play_time": "0分0秒"  # Can be calculated if needed
+            }
+            if save_score(player_data):
+                st.session_state.score_saved = True
+        
+        # Display leaderboard
+        st.markdown("---")
+        st.markdown("### 🏆 トップ10ランキング")
+        
+        leaderboard = load_leaderboard(top_n=10)
+        
+        if leaderboard:
+            # Find player's rank
+            player_name = st.session_state.get('participant_name', '匿名')
+            for idx, entry in enumerate(leaderboard):
+                if entry.get('player_name') == player_name and entry.get('score') == player_score:
+                    player_rank = idx + 1
+                    break
+            
+            # Display leaderboard table
+            for idx, entry in enumerate(leaderboard):
+                rank = idx + 1
+                is_player = (rank == player_rank)
+                
+                # Medals for top 3
+                medal = ""
+                if rank == 1:
+                    medal = "🥇"
+                elif rank == 2:
+                    medal = "🥈"
+                elif rank == 3:
+                    medal = "🥉"
+                else:
+                    medal = f"{rank}い"
+                
+                # Highlight player's row
+                if is_player:
+                    st.markdown(f"""
+                    <div style="background: linear-gradient(135deg, #FFE5D4, #FFF8F0); 
+                                border: 2px solid #f3c9a9; 
+                                border-radius: 12px; 
+                                padding: 12px; 
+                                margin: 8px 0;
+                                box-shadow: 0 4px 8px rgba(0,0,0,0.1);">
+                        <span style="font-size: 1.2em; font-weight: bold;">{medal} {entry.get('player_name', '匿名')}</span>
+                        <span style="float: right; font-size: 1.1em; color: #c25b2a;">
+                            🦷 {entry.get('teeth_count', 0)}ほん | 💰 {entry.get('tooth_coins', 0)}まい | 🏆 {entry.get('score', 0)}てん
+                        </span>
+                    </div>
+                    """, unsafe_allow_html=True)
+                else:
+                    col_rank, col_name, col_stats = st.columns([1, 3, 4])
+                    with col_rank:
+                        st.markdown(f"**{medal}**")
+                    with col_name:
+                        st.text(entry.get('player_name', '匿名'))
+                    with col_stats:
+                        st.text(f"🦷 {entry.get('teeth_count', 0)}ほん | 💰 {entry.get('tooth_coins', 0)}まい | 🏆 {entry.get('score', 0)}てん")
+        else:
+            st.info("まだだれもゴールしていないよ！")
     
-    st.success("おめでとう！")
-    
+    st.markdown("---")
     if st.button("📱 LINEページへ", width='stretch', type="secondary"):
         navigate_to('line_coloring')
 

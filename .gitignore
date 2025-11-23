@@ -24,7 +24,11 @@ share/python-wheels/
 MANIFEST
 
 # Streamlit
-.streamlit/
+.streamlit/secrets.toml
+
+# Firebase credentials
+*firebase*.json
+!.github/
 
 # Environments
 .env

@@ -91,12 +91,12 @@ def display_image(category, filename, caption=None, width=None, fill='stretch', 
         else:
             # どの表示方法でも失敗した場合は最後のエラーをログし、最小構成で表示
             if last_error:
-                logger.warning("画像表示で互換性の問題が発生しました: %s", last_error)
+                logger.debug("画像表示で互換性の問題が発生しました: %s", last_error)
             st.image(str(image_path), caption=caption)
         return True
     else:
-        # 画像が見つからない場合はログのみ出力
-        logger.warning("画像が見つかりませんでした: category=%s filename=%s", category, filename)
+        # 画像が見つからない場合はログのみ出力（デバッグレベル）
+        logger.debug("画像が見つかりませんでした: category=%s filename=%s", category, filename)
         return False
 
 def display_image_grid(category, image_list, columns=3, captions=None):

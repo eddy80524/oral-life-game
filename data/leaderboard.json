@@ -1,1 +1,29 @@
-[]
+[
+  {
+    "player_name": "テスト",
+    "age_group": "5plus",
+    "teeth_count": 28,
+    "tooth_coins": 18500,
+    "play_time": "0分0秒",
+    "timestamp": "2025-11-23T16:18:14.240434",
+    "score": 18780
+  },
+  {
+    "player_name": "テスト",
+    "age_group": "5plus",
+    "teeth_count": 28,
+    "tooth_coins": 15000,
+    "play_time": "0分0秒",
+    "timestamp": "2025-11-23T15:06:56.845548",
+    "score": 15280
+  },
+  {
+    "player_name": "テスト",
+    "age_group": "5plus",
+    "teeth_count": 28,
+    "tooth_coins": 13000,
+    "play_time": "0分0秒",
+    "timestamp": "2025-11-23T15:16:25.236686",
+    "score": 13280
+  }
+]

@@ -648,7 +648,6 @@ def apply_tooth_effects(game_state, landing_cell, feedback):
     if title == "バイクで大事故" or title == "バイク事故":
         lost = teeth_service.lose_specific_teeth(game_state, ["UL1", "UR1"], permanent=True)
         if lost:
-            tooth_messages.append(('error', '💥 前歯が2本折れてしまった…きをつけよう！'))
             effect_applied = True
     if title == "茶渋除去":
         cleaned = teeth_service.whiten_teeth(game_state)
@@ -1513,8 +1512,11 @@ def show_game_board_page():
             )
             if not skip_media:
                 render_cell_media(current_position, current_cell)
-
-
+                
+                # captionがあれば表示
+                caption = current_cell.get('caption')
+                if caption:
+                    st.markdown(f"<div style='text-align: center; color: #5c4033; margin-top: 1rem; padding: 0 1rem; line-height: 1.6;'>{caption}</div>", unsafe_allow_html=True)
 
             cell_type = current_cell.get('type', 'normal')
             action_taken = False
@@ -2660,21 +2662,38 @@ def show_goal_page():
                                 border-radius: 12px; 
                                 padding: 12px; 
                                 margin: 8px 0;
-                                box-shadow: 0 4px 8px rgba(0,0,0,0.1);">
-                        <span style="font-size: 1.2em; font-weight: bold;">{medal} {entry.get('player_name', '匿名')}</span>
-                        <span style="float: right; font-size: 1.1em; color: #c25b2a;">
-                            🦷 {entry.get('teeth_count', 0)}ほん | 💰 {entry.get('tooth_coins', 0)}まい | 🏆 {entry.get('score', 0)}てん
-                        </span>
+                                box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+                                display: flex;
+                                flex-wrap: wrap;
+                                justify-content: space-between;
+                                align-items: center;
+                                gap: 8px;">
+                        <div style="font-size: 1.2em; font-weight: bold;">{medal} {entry.get('player_name', '匿名')}</div>
+                        <div style="font-size: 1.1em; color: #c25b2a; display: flex; gap: 10px; flex-wrap: wrap;">
+                            <span style="white-space: nowrap;">🦷 {entry.get('teeth_count', 0)}ほん</span>
+                            <span style="white-space: nowrap;">💰 {entry.get('tooth_coins', 0)}まい</span>
+                            <span style="white-space: nowrap;">🏆 {entry.get('score', 0)}てん</span>
+                        </div>
                     </div>
                     """, unsafe_allow_html=True)
                 else:
-                    col_rank, col_name, col_stats = st.columns([1, 3, 4])
-                    with col_rank:
-                        st.markdown(f"**{medal}**")
-                    with col_name:
-                        st.text(entry.get('player_name', '匿名'))
-                    with col_stats:
-                        st.text(f"🦷 {entry.get('teeth_count', 0)}ほん | 💰 {entry.get('tooth_coins', 0)}まい | 🏆 {entry.get('score', 0)}てん")
+                    # Use HTML for consistent responsive layout instead of st.columns
+                    st.markdown(f"""
+                    <div style="border-bottom: 1px solid #eee; 
+                                padding: 10px 5px; 
+                                display: flex; 
+                                flex-wrap: wrap; 
+                                justify-content: space-between; 
+                                align-items: center; 
+                                gap: 5px;">
+                        <div style="font-weight: bold; color: #444;">{medal} {entry.get('player_name', '匿名')}</div>
+                        <div style="color: #666; font-size: 0.95em; display: flex; gap: 10px; flex-wrap: wrap;">
+                            <span style="white-space: nowrap;">🦷 {entry.get('teeth_count', 0)}ほん</span>
+                            <span style="white-space: nowrap;">💰 {entry.get('tooth_coins', 0)}まい</span>
+                            <span style="white-space: nowrap;">🏆 {entry.get('score', 0)}てん</span>
+                        </div>
+                    </div>
+                    """, unsafe_allow_html=True)
         else:
             st.info("まだだれもゴールしていないよ！")
     
@@ -2684,40 +2703,83 @@ def show_goal_page():
 
 def show_line_coloring_page():
     """LINE・ぬりえページ"""
-    st.markdown("### 📱 LINE公式アカウント")
+    st.markdown("### 🎁 イベント・プレゼント")
     
-    st.info("LINE公式アカウントをフォローしよう！お口の健康に関する情報や楽しいコンテンツをお届けします！")
+    # 1. Smoothie Banner
+    banner_path = "assets/images/event_banner.png"
+    if os.path.exists(banner_path):
+        st.image(banner_path, use_column_width=True)
+    else:
+        # Placeholder if image doesn't exist
+        st.markdown("""
+        <div style='
+            background: linear-gradient(135deg, #ff9a9e 0%, #fecfef 99%, #fecfef 100%);
+            border-radius: 15px;
+            padding: 30px;
+            text-align: center;
+            margin-bottom: 20px;
+            color: #fff;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        '>
+            <h2 style='margin:0; text-shadow: 1px 1px 2px rgba(0,0,0,0.2);'>🥤 国産野菜・果物スムージー</h2>
+            <p style='font-size: 1.2em; font-weight: bold; margin: 10px 0;'>無料プレゼントキャンペーン中！</p>
+            <p style='font-size: 0.9em; opacity: 0.9;'>(ここにバナー画像が入ります: assets/images/event_banner.png)</p>
+        </div>
+        """, unsafe_allow_html=True)
+
+    st.markdown("### 📱 公式SNSをフォローしよう！")
+    st.info("お得な情報やイベントのお知らせをお届けします！")
+
+    # 2. SNS Buttons (Instagram & LINE)
+    col1, col2 = st.columns(2)
     
-    # LINEへの誘導ボタン
-    st.markdown("""
-    <div style='text-align: center; margin: 20px 0;'>
-        <a href="https://line.me/R/ti/p/@551bgrrd" target="_blank" style="text-decoration: none;">
+    with col1:
+        # Instagram Button
+        st.markdown("""
+        <a href="https://www.instagram.com/okuchi_channel?igsh=MW5ranZ1djU5a2F4Mw%3D%3D&utm_source=qr" target="_blank" style="text-decoration: none;">
             <div style='
-                background: linear-gradient(135deg, #00B900, #00C300);
+                background: linear-gradient(45deg, #f09433 0%, #e6683c 25%, #dc2743 50%, #cc2366 75%, #bc1888 100%);
                 color: white;
-                padding: 15px 30px;
+                padding: 15px 10px;
                 border-radius: 10px;
-                font-size: 1.2em;
+                text-align: center;
                 font-weight: bold;
-                border: none;
-                cursor: pointer;
-                box-shadow: 0 4px 8px rgba(0,0,0,0.2);
-                transition: all 0.3s ease;
-                display: inline-block;
-                width: 100%;
-                max-width: 400px;
+                box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+                transition: transform 0.2s;
+                height: 100%;
+                display: flex;
+                align-items: center;
+                justify-content: center;
             '>
-                📱 LINE公式アカウントをフォロー
+                📷 Instagram<br>フォローする
             </div>
         </a>
-    </div>
-    """, unsafe_allow_html=True)
-    
-    st.markdown("""
-    <p style='text-align: center; color: #666; font-size: 0.9em; margin: 10px 0;'>
-        ボタンをクリックするとLINEアプリまたは新しいタブでLINEページが開きます
-    </p>
-    """, unsafe_allow_html=True)
+        """, unsafe_allow_html=True)
+        
+    with col2:
+        # LINE Button
+        st.markdown("""
+        <a href="https://liff.line.me/2007961525-kYlrjMnn/ts/01kazsr2kph000yybtnpxzmcqn" target="_blank" style="text-decoration: none;">
+            <div style='
+                background: #00B900;
+                color: white;
+                padding: 15px 10px;
+                border-radius: 10px;
+                text-align: center;
+                font-weight: bold;
+                box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+                transition: transform 0.2s;
+                height: 100%;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+            '>
+                💬 LINE<br>友だち追加
+            </div>
+        </a>
+        """, unsafe_allow_html=True)
+
+    st.markdown("<div style='margin-bottom: 20px;'></div>", unsafe_allow_html=True)
     
     if st.button("🏠 さいしょからもういちど", width='stretch'):
         # ゲーム状態をリセット

@@ -16,6 +16,7 @@
     "title": "コップ飲み",
     "desc": "コップで水を飲めるようになった！お口の発達を促すことができます。",
     "image": "board/cell_01",
+    "caption": "コップ飲みはお口の発達を促すことができます。",
     "action": "drink_water",
     "audio_id": "drink_water",
     "display_label": "1"
@@ -26,6 +27,7 @@
     "title": "初めての言葉",
     "desc": "初めて言葉が話せた！何を話したかな？",
     "image": "board/cell_02",
+    "caption": "皆さんが初めて話した言葉は何ですか？子ども達にも教えてあげてください。",
     "action": "first_words",
     "audio_id": "first_words",
     "display_label": "2"
@@ -36,6 +38,7 @@
     "title": "ジャンプ",
     "desc": "ジャンプができるようになった！その場で3回ジャンプ！適度な運動でストレス解消！",
     "image": "board/cell_03",
+    "caption": "適度な運動でストレス解消！ストレスは歯ぎしりや食いしばりにつながります。",
     "action": "jump",
     "audio_id": "jump",
     "display_label": "3"
@@ -46,6 +49,7 @@
     "title": "フッ素塗布",
     "desc": "歯医者さんでフッ素を塗ってもらった。フッ素は歯を強くするお薬です。3000トゥースもらう。",
     "image": "board/cell_04",
+    "caption": "フッ素は歯を強くするお薬です。生え始めた時に塗るとより効果的！",
     "tooth_delta": 3000,
     "audio_id": "fluoride",
     "display_label": "4"
@@ -56,6 +60,7 @@
     "title": "外遊び",
     "desc": "太陽の光を浴びて外でいっぱい遊んだ。カルシウムの吸収がアップ！",
     "image": "board/cell_05",
+    "caption": "太陽の光を浴びるとカルシウムの吸収がアップ！骨や歯が強くなります。",
     "action": "outdoor_play",
     "audio_id": "outdoor_play",
     "display_label": "5"
@@ -66,6 +71,7 @@
     "title": "歯が抜けた",
     "desc": "初めて歯が抜けた。抜けた歯はどうしたかな？",
     "image": "board/cell_06",
+    "caption": "皆さんは抜けた歯をどうしましたか？子どもたちにも教えてあげてください。",
     "action": "tooth_loss",
     "audio_id": "tooth_loss",
     "display_label": "6"
@@ -73,6 +79,7 @@
   {
     "cell": 7,
     "type": "quiz",
+    "force_stop": true,
     "title": "むし歯クイズ",
     "desc": "みんなで挑戦！むし歯クイズ",
     "image": "board/cell_07",
@@ -88,6 +95,7 @@
     "title": "むし歯治療",
     "desc": "むし歯ができた、歯が痛い。歯医者さんで治療する。2000トゥース払う。",
     "image": "board/cell_08",
+    "caption": "大きいむし歯になると１回の治療では終わらないことも…",
     "tooth_delta": -2000,
     "audio_id": "caries_treatment",
     "display_label": "8"
@@ -98,6 +106,7 @@
     "title": "ジュース",
     "desc": "お母さんにおねだりして毎日ジュースを買ってもらった。500トゥース払う。",
     "image": "board/cell_09",
+    "caption": "一見ヘルシーなスポーツドリンクにも1本当たり角砂糖7-10個程度の砂糖が入っています。",
     "tooth_delta": -500,
     "audio_id": "juice",
     "display_label": "9"
@@ -108,6 +117,7 @@
     "title": "抜歯",
     "desc": "むし歯を放っておいたら大人の歯を１つ抜くことに… 2000トゥース払う。",
     "image": "board/cell_10",
+    "caption": "大人の歯を抜くと生え変わってきません…歯は一生物ですね。",
     "tooth_delta": -2000,
     "teeth_delta": -1,
     "audio_id": "extraction",
@@ -120,6 +130,7 @@
     "title": "フロス",
     "desc": "フロスが１人でできるようになった。フロスは使ってる？",
     "image": "board/cell_11",
+    "caption": "歯と歯の間はむし歯になりやすい…歯が生えそろってきたら少しずつフロスも始めてみましょう。",
     "action": "floss",
     "audio_id": "floss",
     "display_label": "8"
@@ -130,6 +141,7 @@
     "title": "お菓子我慢",
     "desc": "夜にお菓子を食べたくなったけど我慢した。500トゥースもらう。",
     "image": "board/cell_12",
+    "caption": "寝ている間は唾液が少なくてむし歯になりやすい時間帯です。",
     "tooth_delta": 500,
     "audio_id": "no_snack",
     "display_label": "9"
@@ -140,6 +152,7 @@
     "title": "野菜",
     "desc": "苦手な野菜を食べて先生に褒められた。500トゥースもらう。",
     "image": "board/cell_13",
+    "caption": "10歳からは成人と同じ1日あたり手のひら3杯分の野菜が必要です。",
     "tooth_delta": 500,
     "audio_id": "veggies",
     "next_cell": 14,
@@ -151,6 +164,7 @@
     "title": "フッ素塗布",
     "desc": "歯医者さんでフッ素を塗ってもらった。3000トゥースもらう。",
     "image": "board/cell_14",
+    "caption": "フッ素は歯を強くするお薬です。生え始めた時に塗るとより効果的！",
     "tooth_delta": 3000,
     "audio_id": "fluoride_2",
     "display_label": "11"
@@ -158,9 +172,11 @@
   {
     "cell": 15,
     "type": "stop",
+    "force_stop": true,
     "title": "スムージー",
     "desc": "甘いジュースを野菜たっぷりスムージーに変えてみた。クーポンゲット！",
     "image": "board/cell_15",
+    "caption": "砂糖不使用、国産野菜・果物たっぷり！子どもに大人気のスムージー\n限定500円オフのクーポンゲットしよう！\n後ほど試食ができます！",
     "coupon_url": "https://example.com/coupon",
     "audio_id": "smoothie",
     "display_label": "12"
@@ -171,6 +187,7 @@
     "title": "夜更かし",
     "desc": "中学生になって勉強が忙しくなって夜更かし。500トゥース払う。",
     "image": "board/cell_16",
+    "caption": "ストレスが溜まると歯ぎしり…気づかないうちに歯に負担がかかっています。",
     "tooth_delta": -500,
     "audio_id": "late_night",
     "display_label": "13"
@@ -178,9 +195,11 @@
   {
     "cell": 17,
     "type": "stop",
+    "force_stop": true,
     "title": "リンゴ",
     "desc": "おいしそうなリンゴを見つけた！かぶりつきパワーをチェック。",
     "image": "board/cell_17",
+    "caption": "噛む力が弱い子ども達が増えています。噛む力が弱いと将来の歯並びにも影響します。歯医者さんコーナーで噛む力をチェックしましょう！",
     "action": "bite_check",
     "audio_id": "apple",
     "display_label": "14"
@@ -191,6 +210,7 @@
     "title": "バイク事故",
     "desc": "バイクで大事故、前歯が2本折れた。2000トゥース払う。",
     "image": "board/cell_18",
+    "caption": "折れた歯は乾燥させないことが大事！牛乳に漬けたり、口の中に含んで歯医者さんに持っていきましょう。",
     "tooth_delta": -2000,
     "teeth_delta": -2,
     "audio_id": "bike_accident",
@@ -202,6 +222,7 @@
     "title": "クリーニング",
     "desc": "歯医者さんでお口をキレイに掃除してもらった。3000トゥースもらう。",
     "image": "board/cell_19",
+    "caption": "歯ブラシで取れる汚れは約60%と言われています。むし歯・歯周病予防には、フロスや歯医者さんでの専門的なお掃除が大事です。",
     "tooth_delta": 3000,
     "audio_id": "cleaning",
     "display_label": "16"
@@ -209,6 +230,7 @@
   {
     "cell": 20,
     "type": "quiz",
+    "force_stop": true,
     "title": "歯周病クイズ",
     "desc": "みんなで挑戦！歯周病クイズ",
     "image": "board/cell_20",
@@ -224,6 +246,7 @@
     "title": "歯がグラグラ",
     "desc": "大人の歯がグラグラ、出た目の数だけ歯を失う。2000トゥース払う。",
     "image": "board/cell_21",
+    "caption": "歯を失う原因第１位はむし歯ではなく歯周病です。",
     "tooth_delta": -2000,
     "action": "dice_tooth_loss",
     "audio_id": "loose_teeth",
@@ -235,6 +258,7 @@
     "title": "茶渋",
     "desc": "お茶を飲みすぎて茶しぶができた。3000トゥース払う。",
     "image": "board/cell_22",
+    "caption": "お茶やコーヒーは着色の原因になります。",
     "tooth_delta": -3000,
     "audio_id": "tea_stain",
     "display_label": "19"
@@ -245,6 +269,7 @@
     "title": "入れ歯",
     "desc": "入れ歯を作ってもらった！7000トゥース払う。",
     "image": "board/cell_23",
+    "caption": "80歳で20本以上歯が残っている人は生き生きと長生きできるというデータもあります。",
     "tooth_delta": -7000,
     "audio_id": "dentures",
     "next_cell": 27,
@@ -256,6 +281,7 @@
     "title": "給料アップ",
     "desc": "仕事で頼られて給料アップ！自信がつくと笑顔も増える！5000トゥースもらう。",
     "image": "board/cell_24",
+    "caption": "キレイなお口・素敵な笑顔は信頼にも繋がります。",
     "tooth_delta": 5000,
     "audio_id": "salary_up",
     "display_label": "18"
@@ -266,6 +292,7 @@
     "title": "笑顔",
     "desc": "キレイな歯と歯茎のおかげで自信を持って笑える。一緒に笑おう！",
     "image": "board/cell_25",
+    "caption": "最近笑っていますか？笑うことでお口の筋肉が鍛えられます。",
     "action": "smile",
     "audio_id": "smile",
     "display_label": "19"
@@ -276,6 +303,7 @@
     "title": "褒められた",
     "desc": "こんなに歯が残っているのは素晴らしい！と褒められた。5000トゥースもらう。",
     "image": "board/cell_26",
+    "caption": "80歳で20本以上歯が残っている人は生き生きと長生きできるというデータもあります。",
     "tooth_delta": 5000,
     "audio_id": "praise",
     "next_cell": 27,
@@ -287,6 +315,7 @@
     "title": "クリーニング",
     "desc": "歯医者さんでお口をキレイに掃除してもらった。3000トゥースもらう。",
     "image": "board/cell_27",
+    "caption": "歯ブラシで取れる汚れは約60%と言われています。むし歯・歯周病予防には、フロスや歯医者さんでの専門的なお掃除が大事です。",
     "tooth_delta": 3000,
     "audio_id": "cleaning_2",
     "display_label": "21"
@@ -297,6 +326,7 @@
     "title": "100歳の誕生日",
     "desc": "100歳の誕生日、家族みんなと楽しく食事ができた。5000トゥースもらう。",
     "image": "board/cell_28",
+    "caption": "人生100年時代、お口の健康はとっても大切ですね。",
     "tooth_delta": 5000,
     "audio_id": "birthday",
     "display_label": "22"

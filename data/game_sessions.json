@@ -117,5 +117,39 @@
     "caries_correct": 0,
     "perio_correct": 0,
     "final_position": 29
+  },
+  {
+    "timestamp": "2025-11-26T18:40:02.870722",
+    "session_id": "7d6f6960-fadc-4599-ba8a-b3e6234708ee",
+    "participant_name": "テスト",
+    "participant_age": 5,
+    "age_group": "5plus",
+    "board": "5plus",
+    "teeth_count": 26,
+    "tooth_coins": 25000,
+    "turn_count": 17,
+    "play_time": "11分10秒",
+    "start_time": "2025-11-26T18:28:52.706162",
+    "reached_goal": true,
+    "caries_correct": 0,
+    "perio_correct": 0,
+    "final_position": 29
+  },
+  {
+    "timestamp": "2025-11-26T22:49:05.971637",
+    "session_id": "95e813cc-d05e-4f8d-b068-cb53fe377170",
+    "participant_name": "えいと",
+    "participant_age": 5,
+    "age_group": "5plus",
+    "board": "5plus",
+    "teeth_count": 26,
+    "tooth_coins": 20500,
+    "turn_count": 16,
+    "play_time": "82分2秒",
+    "start_time": "2025-11-26T21:27:03.228940",
+    "reached_goal": true,
+    "caries_correct": 0,
+    "perio_correct": 0,
+    "final_position": 29
   }
 ]

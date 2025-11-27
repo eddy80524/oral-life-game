@@ -815,21 +815,22 @@ def show_status_header():
         .teeth-table {
             border-collapse: collapse;
             margin: 0 auto;
-            background: linear-gradient(135deg, #FFF8EC, #FFEBD4);
-            border-radius: 15px;
-            padding: 10px;
+            background: transparent;
+            border-radius: 0;
+            padding: 0;
+            border: none;   
         }
         .teeth-table td, .teeth-table th {
             text-align: center;
             height: 50px;
             margin: 0;
-            padding: 5px;
+            padding: 0;
         }
         .teeth-table th {
             background-color: #f59696;
             color: white;
             font-size: 12px;
-            padding: 5px;
+            padding: 0;
         }
         .teeth-table img {
             vertical-align: bottom;

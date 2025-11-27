@@ -16,6 +16,8 @@ def get_image_path(category, filename):
     
     if category == "board":
         return base_path / "board" / filename
+    elif category == "teeth":
+        return base_path / "teeth" / filename
     elif category == "quiz/caries" or category == "quiz_caries":
         return base_path / "quiz" / "caries" / filename
     elif category == "quiz/caries/food" or category == "quiz_caries_food":

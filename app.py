@@ -9,6 +9,7 @@ import json
 import random
 import time
 import uuid
+import base64
 from datetime import datetime
 from typing import Dict
 
@@ -19,6 +20,7 @@ from services import teeth as teeth_service  # noqa: E402
 from services.video_helper import display_video, ensure_video_directories  # noqa: E402
 from services.quiz_helper import load_quiz_data  # noqa: E402
 from services.store import log_player_session  # noqa: E402
+from services.image_helper import get_image_path  # noqa: E402
 
 ensure_video_directories()
 
@@ -569,7 +571,6 @@ PAGE_FLOW = {
     'reception': {'title': '📋 受付・プロローグ', 'next': 'game_board'},
     'game_board': {'title': '🎲 ゲームボード', 'next': 'caries_quiz'},
     'caries_quiz': {'title': '🦷 むし歯クイズ', 'next': 'game_board'},
-    'job_experience': {'title': '👩‍⚕️ おしごとたいけん', 'next': 'checkup'},
     'checkup': {'title': '🏥 定期健診', 'next': 'game_board'},
     'perio_quiz': {'title': '🦷 歯周病クイズ', 'next': 'goal'},
     'goal': {'title': '🏁 ゴール・ランキング', 'next': 'line_coloring'},
@@ -614,12 +615,27 @@ def apply_tooth_effects(game_state, landing_cell, feedback):
             st.session_state.teeth_count = 28
             tooth_messages.append(('success', '✨ 大人の歯が ぜんぶ生えそろったよ！28本になったね。'))
             effect_applied = True
-    if title == "初めて乳歯が抜けた":
-        lost = teeth_service.lose_primary_tooth(game_state, count=1)
-        if lost:
-            tooth_messages.append(('info', '👶 乳歯が1本ぬけたよ。大人の歯がはえてくるまでまっていよう！'))
+    if title == "初めて乳歯が抜けた" or title == "歯が抜けた":
+        # 現在の歯の数を確認
+        teeth_data = teeth_service.load_teeth_json()
+        max_tooth_number = max(int(k) for k in teeth_data["UR"].keys())
+        
+        if max_tooth_number <= 5:
+            # 乳歯（20本）の場合は永久歯（28本）に移行
+            new_teeth = teeth_service.transition_to_adult_teeth()
+            st.session_state.teeth_data = new_teeth
+            tooth_messages.append(('success', '✨ 大人の歯に生え変わったよ！全部で28本になったね。'))
             effect_applied = True
-    if title == "虫歯ができた":
+        else:
+            # すでに永久歯の場合は通常の歯の喪失処理
+            lost = teeth_service.lose_primary_tooth(game_state, count=1)
+            if lost:
+                tooth_messages.append(('info', '👶 乳歯が1本ぬけたよ。大人の歯がはえてくるまでまっていよう！'))
+                effect_applied = True
+            # teeth.jsonも更新
+            teeth_service.update_tooth_status_random("E", count=1)
+            st.session_state.teeth_data = teeth_service.load_teeth_json()
+    if title == "虫歯ができた" or title == "むし歯治療":
         damaged = teeth_service.damage_random_tooth(
             game_state,
             kinds=(
@@ -634,37 +650,77 @@ def apply_tooth_effects(game_state, landing_cell, feedback):
         if damaged:
             tooth_messages.append(('warning', '⚠️ 虫歯ができちゃった…定期検診でなおそう！'))
             effect_applied = True
-    if title == "ジュースをおねだり":
+        # teeth.jsonも更新
+        teeth_service.update_tooth_status_random("C", count=1)
+        st.session_state.teeth_data = teeth_service.load_teeth_json()
+    if title == "ジュースをおねだり" or title == "ジュース":
         stained = teeth_service.stain_teeth(game_state, count=3)
         if stained:
             tooth_messages.append(('warning', '🥤 ジュースばかりで歯がすこし黄ばんできたよ。'))
             effect_applied = True
-    if title == "むし歯を放置":
+        # teeth.jsonも更新
+        teeth_service.update_tooth_status_random("S", count=3)
+        st.session_state.teeth_data = teeth_service.load_teeth_json()
+    if title == "むし歯を放置" or title == "抜歯":
         # ランダムに1本の歯を失う
         lost = teeth_service.lose_random_teeth(game_state, count=1, permanent=True)
         if lost:
             tooth_messages.append(('error', '😢 むし歯を放っておいたら歯を1本失ってしまった…'))
             effect_applied = True
+        # teeth.jsonも更新
+        teeth_service.update_tooth_status_random("E", count=1)
+        st.session_state.teeth_data = teeth_service.load_teeth_json()
     if title == "バイクで大事故" or title == "バイク事故":
         lost = teeth_service.lose_specific_teeth(game_state, ["UL1", "UR1"], permanent=True)
         if lost:
+            tooth_messages.append(('error', '😢 バイク事故で前歯を2本失ってしまった…'))
             effect_applied = True
-    if title == "茶渋除去":
-        cleaned = teeth_service.whiten_teeth(game_state)
-        if cleaned:
-            tooth_messages.append(('success', '✨ 茶渋をきれいにして歯がピカピカになったよ！'))
-            effect_applied = True
-    if title == "入れ歯作成":
+        # teeth.jsonも更新（前歯2本）
+        teeth_data = teeth_service.load_teeth_json()
+        teeth_data["UL"]["1"] = "E"
+        teeth_data["UR"]["1"] = "E"
+        teeth_service.save_teeth_json(teeth_data)
+        st.session_state.teeth_data = teeth_data
+    if title == "茶渋除去" or title == "茶渋" or title == "お茶":
+        if "除去" in title or "クリーニング" in title:
+            cleaned = teeth_service.whiten_teeth(game_state)
+            if cleaned:
+                tooth_messages.append(('success', '✨ 茶渋をきれいにして歯がピカピカになったよ！'))
+                effect_applied = True
+            # teeth.jsonも更新（S→N）
+            teeth_service.restore_stained_teeth()
+            st.session_state.teeth_data = teeth_service.load_teeth_json()
+        else:
+            stained = teeth_service.stain_teeth(game_state, count=3)
+            if stained:
+                tooth_messages.append(('warning', '☕ お茶で茶渋がついてしまった…'))
+                effect_applied = True
+            # teeth.jsonも更新
+            teeth_service.update_tooth_status_random("S", count=3)
+            st.session_state.teeth_data = teeth_service.load_teeth_json()
+    if title == "入れ歯作成" or title == "入れ歯":
         added = teeth_service.add_prosthetics(game_state, count=2)
         if added:
             tooth_messages.append(('info', '🦷 入れ歯でなくなった歯がもどったよ。'))
             effect_applied = True
-    if landing_cell.get('type') == 'stop':
+        # teeth.jsonも更新（E→R）
+        teeth_service.restore_missing_teeth(count=2)
+        st.session_state.teeth_data = teeth_service.load_teeth_json()
+    if (landing_cell.get('type') == 'stop' and '検診' in title) or title == "クリーニング":
         repaired = teeth_service.repair_damaged_teeth(game_state)
         cleaned = teeth_service.whiten_teeth(game_state)
+        
+        # メッセージを表示（治療がなくても表示）
         if repaired or cleaned:
             tooth_messages.append(('success', '🪥 定期検診で歯がきれいになったよ！'))
-            effect_applied = True
+        else:
+            tooth_messages.append(('info', '🪥 お口をきれいにしてもらったよ！'))
+        effect_applied = True
+        
+        # teeth.jsonも更新（C→R, S→N）
+        teeth_service.restore_damaged_teeth()
+        teeth_service.restore_stained_teeth()
+        st.session_state.teeth_data = teeth_service.load_teeth_json()
     if action == 'floss_check':
         repaired = teeth_service.repair_damaged_teeth(game_state)
         if repaired:
@@ -726,8 +782,8 @@ def show_progress_bar():
     """, unsafe_allow_html=True)
 
 def show_status_header():
-    """ゲーム状態のヘッダー表示（ビジュアル版）"""
-    if 'game_state' in st.session_state and st.session_state.current_page not in ['reception', 'staff_management', 'checkup', 'perio_quiz', 'caries_quiz']:
+    """ゲーム状態のヘッダー表示（HTML/JSONベース）"""
+    if st.session_state.current_page not in ['reception', 'staff_management', 'checkup', 'perio_quiz', 'caries_quiz']:
         if st.session_state.current_page == 'game_board':
             stage = st.session_state.get('game_board_stage', 'board')
             if stage == 'roulette':
@@ -736,99 +792,111 @@ def show_status_header():
                 current_position = st.session_state.game_state.get('current_position', 0)
                 if current_position == 0:
                     return
-
-        game_state = st.session_state.game_state
-
-        # 歯の本数表示のみ（1列表示）
-        with st.container():
-            current_position = game_state.get('current_position', 0)
-            tooth_stage = game_state.get('tooth_stage')
-            if tooth_stage in {'child', 'adult'}:
-                stage = tooth_stage
-            else:
-                # 虫歯クイズ（5マス目 = 位置4）以降は adult
-                stage = 'child' if current_position < 5 else 'adult'
+        
+        # teeth.jsonを読み込む（セッション状態から、またはファイルから）
+        if 'teeth_data' not in st.session_state:
+            st.session_state.teeth_data = teeth_service.load_teeth_json()
+        
+        teeth_data = st.session_state.teeth_data
+        
+        def get_tooth_image_base64(image_name: str) -> str:
+            """歯の画像をBase64エンコード"""
+            image_path = get_image_path("teeth", image_name)
             
-            if stage == 'child':
-                base_order = ["乳中切歯", "乳側切歯", "乳犬歯", "第一乳臼歯", "第二乳臼歯"]
-                short_map = {
-                    "乳中切歯": "乳中",
-                    "乳側切歯": "乳側",
-                    "乳犬歯": "乳犬",
-                    "第一乳臼歯": "乳臼1",
-                    "第二乳臼歯": "乳臼2",
-                }
-                total_teeth = 20
-            else:
-                base_order = ["中切歯", "側切歯", "犬歯", "第一小臼歯", "第二小臼歯", "第一大臼歯", "第二大臼歯"]
-                short_map = {
-                    "中切歯": "中切",
-                    "側切歯": "側切",
-                    "犬歯": "犬歯",
-                    "第一小臼歯": "小臼1",
-                    "第二小臼歯": "小臼2",
-                    "第一大臼歯": "大臼1",
-                    "第二大臼歯": "大臼2",
-                }
-                total_teeth = 28
-
-            left_side = base_order[::-1]
-            right_side = base_order
-            upper_labels = left_side + right_side
-            lower_labels = upper_labels
-
-            # 実際の tooth_chart から歯の状態を取得
-            tooth_chart = game_state.get('tooth_chart', [])
-            tooth_status = {}
-            healthy_count = 0
-            for tooth in tooth_chart:
-                if tooth.get('visible', True):
-                    tooth_id = tooth.get('id')
-                    status = tooth.get('status', 'healthy')
-                    tooth_status[tooth_id] = status
-                    # 健康な歯をカウント
-                    if status in ['healthy', 'cavity', 'treated']:
-                        healthy_count += 1
-            
-            # present_teeth は実際の健康な歯の数を使用
-            present_teeth = healthy_count
-
-            # 歯のIDマッピング（表示順 → tooth_id）
-            if stage == 'child':
-                # 上列: 左5-1, 右1-5 → UL5,UL4,UL3,UL2,UL1, UR1,UR2,UR3,UR4,UR5
-                upper_ids = [f"UL{i}" for i in range(5, 0, -1)] + [f"UR{i}" for i in range(1, 6)]
-                # 下列: 左5-1, 右1-5 → LL5,LL4,LL3,LL2,LL1, LR1,LR2,LR3,LR4,LR5
-                lower_ids = [f"LL{i}" for i in range(5, 0, -1)] + [f"LR{i}" for i in range(1, 6)]
-            else:
-                # 上列: 左7-1, 右1-7 → UL7,UL6,...,UL1, UR1,UR2,...,UR7
-                upper_ids = [f"UL{i}" for i in range(7, 0, -1)] + [f"UR{i}" for i in range(1, 8)]
-                # 下列: 左7-1, 右1-7 → LL7,LL6,...,LL1, LR1,LR2,...,LR7
-                lower_ids = [f"LL{i}" for i in range(7, 0, -1)] + [f"LR{i}" for i in range(1, 8)]
-
-            def render_row(labels, tooth_ids):
-                cells = []
-                for idx, (label, tooth_id) in enumerate(zip(labels, tooth_ids)):
-                    short = short_map.get(label, label)
-                    # tooth_chart の状態を確認
-                    status = tooth_status.get(tooth_id, 'healthy')
-                    filled = status in ['healthy', 'cavity', 'treated']
-                    classes = "simple-tooth-block-labeled " + ("is-filled" if filled else "is-missing")
-                    cells.append(f"<div class='{classes}' data-label='{short}'></div>")
-                return ''.join(cells)
-
-            upper_html = render_row(upper_labels, upper_ids)
-            lower_html = render_row(lower_labels, lower_ids)
-
-            st.markdown(
-                f"""
-                <div class="simple-teeth-container">
-                    <div class="simple-teeth-row teeth-upper">{upper_html}</div>
-                    <div class="teeth-midline"></div>
-                    <div class="simple-teeth-row teeth-lower">{lower_html}</div>
-                </div>
-                """,
-                unsafe_allow_html=True,
-            )
+            if image_path and os.path.exists(image_path):
+                with open(image_path, "rb") as f:
+                    encoded = base64.b64encode(f.read()).decode()
+                    return f"data:image/png;base64,{encoded}"
+            return ""
+        
+        # CSSスタイル
+        st.markdown("""
+        <style>
+        .teeth-table {
+            border-collapse: collapse;
+            margin: 0 auto;
+            background: linear-gradient(135deg, #FFF8EC, #FFEBD4);
+            border-radius: 15px;
+            padding: 10px;
+        }
+        .teeth-table td, .teeth-table th {
+            text-align: center;
+            height: 50px;
+            margin: 0;
+            padding: 5px;
+        }
+        .teeth-table th {
+            background-color: #f59696;
+            color: white;
+            font-size: 12px;
+            padding: 5px;
+        }
+        .teeth-table img {
+            vertical-align: bottom;
+            height: 40px;
+            width: auto;
+        }
+        .upper-teeth img {
+            vertical-align: top;
+            transform: rotate(180deg);
+            transform-origin: center center;
+        }
+        </style>
+        """, unsafe_allow_html=True)
+        
+        # 上の歯（UR, UL）
+        upper_row_html = '<tr class="upper-teeth">'
+        
+        # UR (右上) 7→1の順
+        for i in range(7, 0, -1):
+            status = teeth_data.get("UR", {}).get(str(i), "N")
+            img_name = teeth_service.get_tooth_image_filename("UR", i, status)
+            img_url = get_tooth_image_base64(img_name)
+            upper_row_html += f'<td><img src="{img_url}" alt="UR{i}"></td>' if img_url else '<td></td>'
+        
+        # UL (左上) 1→7の順
+        for i in range(1, 8):
+            status = teeth_data.get("UL", {}).get(str(i), "N")
+            img_name = teeth_service.get_tooth_image_filename("UL", i, status)
+            img_url = get_tooth_image_base64(img_name)
+            upper_row_html += f'<td><img src="{img_url}" alt="UL{i}"></td>' if img_url else '<td></td>'
+        
+        upper_row_html += '</tr>'
+        
+        # 下の歯（LR, LL）
+        lower_row_html = '<tr>'
+        
+        # LR (右下) 7→1の順
+        for i in range(7, 0, -1):
+            status = teeth_data.get("LR", {}).get(str(i), "N")
+            img_name = teeth_service.get_tooth_image_filename("LR", i, status)
+            img_url = get_tooth_image_base64(img_name)
+            lower_row_html += f'<td><img src="{img_url}" alt="LR{i}"></td>' if img_url else '<td></td>'
+        
+        # LL (左下) 1→7の順
+        for i in range(1, 8):
+            status = teeth_data.get("LL", {}).get(str(i), "N")
+            img_name = teeth_service.get_tooth_image_filename("LL", i, status)
+            img_url = get_tooth_image_base64(img_name)
+            lower_row_html += f'<td><img src="{img_url}" alt="LL{i}"></td>' if img_url else '<td></td>'
+        
+        lower_row_html += '</tr>'
+        
+        # テーブル全体のHTML
+        st.markdown(f"""
+        <table class="teeth-table">
+            <tr>
+                <th colspan="7">右上</th>
+                <th colspan="7">左上</th>
+            </tr>
+            {upper_row_html}
+            {lower_row_html}
+            <tr>
+                <th colspan="7">右下</th>
+                <th colspan="7">左下</th>
+            </tr>
+        </table>
+        """, unsafe_allow_html=True)
 
 def show_reception_page():
     """受付・プロローグページ（フルスクリーンウィザード）"""
@@ -1061,6 +1129,10 @@ def show_game_board_page():
     if 'game_state' not in st.session_state:
         from services.game_logic import initialize_game_state
         initialize_game_state()
+    
+    # 歯の初期化（ゲーム開始時に乳歯20本で開始）
+    if 'teeth_data' not in st.session_state:
+        st.session_state.teeth_data = teeth_service.initialize_child_teeth()
 
     st.session_state.setdefault('game_board_stage', 'card')
     stage = st.session_state.game_board_stage
@@ -1159,16 +1231,6 @@ def show_game_board_page():
             limit = max_reachable
 
         allowed = list(range(1, limit + 1))
-        
-        # 5歳未満モードでcell 13（野菜ジュース開発）をスキップする処理
-        participant_age = st.session_state.get('participant_age', 5)
-        if participant_age < 5:
-            # cell 11（夜更かし）にいる場合、2を除外（cell 13に到達しないように）
-            if position == 11 and 2 in allowed:
-                allowed.remove(2)
-            # cell 12（定期検診2）にいる場合、1を除外（cell 13に到達しないように）
-            elif position == 12 and 1 in allowed:
-                allowed.remove(1)
 
         return allowed, next_stop_distance, distance_to_goal
 
@@ -1247,34 +1309,6 @@ def show_game_board_page():
 
             landing_cell = board_data[new_position]
             resolve_cell_effect(landing_cell)
-
-            step_hops = 0
-            while True:
-                step_delta = landing_cell.get('step_delta')
-                if not isinstance(step_delta, int) or step_delta == 0 or step_hops >= 3:
-                    break
-                cell_id = landing_cell.get('cell', new_position)
-                immunity = st.session_state.get('step_immunity')
-                current_turn = st.session_state.game_state.get('turn_count', 0)
-                if immunity and immunity.get('cell') == cell_id:
-                    if current_turn <= immunity.get('turn', -1) + 1:
-                        st.session_state.pop('step_immunity', None)
-                        break
-                    else:
-                        st.session_state.pop('step_immunity', None)
-                step_hops += 1
-                previous_position = new_position
-                target_position = max(0, min(max_position_index, new_position + step_delta))
-                if target_position == new_position:
-                    break
-                new_position = target_position
-                game_state_ref['current_position'] = new_position
-                direction = "もどった" if step_delta < 0 else "すすんだ"
-                feedback['tooth_messages'].append(('info', f"🔁 {abs(step_delta)}マス{direction}よ！"))
-                if step_delta < 0:
-                    st.session_state.step_immunity = {'cell': cell_id, 'turn': current_turn}
-                landing_cell = board_data[new_position]
-                resolve_cell_effect(landing_cell)
 
             landing_title = landing_cell.get('title', '')
             landing_type = landing_cell.get('type', 'normal')
@@ -1536,47 +1570,7 @@ def show_game_board_page():
                         navigate_to('perio_quiz')
                         action_taken = True
             next_action = current_cell.get('next_action') or current_cell.get('route')
-            if (
-                '職業' in title
-                or 'おしごと' in title
-                or 'お仕事' in title
-                or next_action == 'job_experience'
-                or cell_type == 'job_experience'
-            ):
-                job_allowed = st.session_state.participant_age >= 5
-                if job_allowed and not st.session_state.get('job_experience_completed'):
-                    auto_complete_job_experience(current_position)
-                action_taken = job_allowed  # 5歳以上はここで一旦停止、未満は通常ルーレットへ
-                print(f"\n🔍 DEBUG [職業マス検出]: title='{title}', cell_type='{cell_type}', action_taken={action_taken}")
-                print(f"🔍 DEBUG [職業マス]: participant_age={st.session_state.participant_age}")
-                
-                # 職業体験完了後の処理
-                if st.session_state.get('job_experience_completed'):
-                    st.success("🎉 おしごとたいけん かんりょう！")
-                    st.info("つぎのマスへすすもう！")
-                    
-                    # ルーレットボタンを表示
-                    allowed_numbers, _, _ = compute_allowed_numbers(current_position)
-                    if allowed_numbers:
-                        st.markdown("<div style='height:1.5vh'></div>", unsafe_allow_html=True)
-                        if st.button("🎡 ルーレットをまわす", key="job_to_roulette", use_container_width=True, type="primary"):
-                            st.session_state.job_experience_completed = False  # フラグをリセット
-                            st.session_state.pop('job_auto_processed_cell', None)
-                            st.session_state.pending_spin_allowed = allowed_numbers
-                            st.session_state.pop('roulette_spin_state', None)
-                            st.session_state.game_board_stage = 'roulette'
-                            st.session_state.pop('roulette_recent_feedback', None)
-                            st.rerun()
-                elif st.session_state.participant_age >= 5:
-                    print(f"🔍 DEBUG [職業マス]: 5歳以上 -> ボタン表示")
-                    if st.button("👩‍⚕️ おしごとたいけんへすすむ", use_container_width=True, type="primary", key=f'job_btn_{current_position}'):
-                        print(f"🔍 DEBUG [職業マス]: ボタンクリック -> job_experience へ遷移")
-                        navigate_to('job_experience')
-                        st.rerun()
-                else:
-                    print(f"🔍 DEBUG [職業マス]: 5歳未満 -> スキップメッセージ表示")
-                    st.info("おしごとたいけんは5さい以上だよ。")
-            elif cell_type == 'stop' or '検診' in title:
+            if cell_type == 'stop' or '検診' in title:
                 # next_actionがperiodontitis_quizの場合は定期検診ページに行かず、
                 # すでに検診完了とみなしてルーレットを表示する
                 if next_action == 'periodontitis_quiz':
@@ -1607,9 +1601,8 @@ def show_game_board_page():
             is_completed_checkup = (next_action == 'periodontitis_quiz')
             
             can_spin = ((not action_taken or is_completed_checkup) 
-                        and cell_type not in {'quiz', 'job_experience'}
+                        and cell_type != 'quiz'
                         and not (cell_type == 'stop' and next_action and next_action != 'periodontitis_quiz')
-                        and '職業' not in title and 'おしごと' not in title and 'お仕事' not in title
                         and current_position < max_position_index)
             
             print(f"🔍 DEBUG [can_spin]: action_taken={action_taken}, cell_type='{cell_type}', title='{title}', next_action='{next_action}', can_spin={can_spin}")
@@ -2780,13 +2773,6 @@ def show_line_coloring_page():
         """, unsafe_allow_html=True)
 
     st.markdown("<div style='margin-bottom: 20px;'></div>", unsafe_allow_html=True)
-    
-    if st.button("🏠 さいしょからもういちど", width='stretch'):
-        # ゲーム状態をリセット
-        for key in list(st.session_state.keys()):
-            if key.startswith(('game_state', 'quiz_', 'selected_job')):
-                del st.session_state[key]
-        navigate_to('reception')
 
 def show_staff_management_page():
     """スタッフ管理ページ"""
@@ -2798,100 +2784,16 @@ def show_staff_management_page():
     if pin == "0418":
         st.success("✅ 認証成功")
         
-        col1, col2 = st.columns(2)
-        
-        with col1:
-            if st.button("🗑️ 全データリセット"):
-                for key in list(st.session_state.keys()):
-                    del st.session_state[key]
-                st.success("データをリセットしました")
-                navigate_to('reception')
-        
-        with col2:
-            if st.button("🧪 画像テスト"):
-                navigate_to('image_test')
+        if st.button("🗑️ 全データリセット", use_container_width=True):
+            for key in list(st.session_state.keys()):
+                del st.session_state[key]
+            st.success("データをリセットしました")
+            navigate_to('reception')
     elif pin:
         st.error("❌ PINコードが正しくありません")
     
     if st.button("🏠 メインページに戻る"):
         navigate_to('reception')
-
-def show_image_test_page():
-    """画像テストページ"""
-    st.title("🧪 画像テスト")
-    st.markdown("---")
-    
-    try:
-        from services.image_helper import display_image
-        
-        # ボード画像テスト
-        st.subheader("1. ボードマス画像テスト")
-        board_images = ["cell_01", "cell_02", "cell_03", "cell_04", "cell_05"]
-        for cell_name in board_images:
-            display_image("board", cell_name, "")
-        
-        # クイズ画像テスト
-        st.subheader("2. クイズ画像テスト")
-        
-        # 虫歯クイズメイン画像
-        st.markdown("**虫歯クイズ - メイン画像**")
-        display_image("quiz/caries", "main_image", "")
-        
-        # 虫歯クイズ問題画像
-        st.markdown("**虫歯クイズ - 問題画像**")
-        display_image("quiz/caries", "question_1", "")
-        display_image("quiz/caries", "question_2", "")
-        
-        # 食べ物選択肢（JPEG対応）
-        st.markdown("**食べ物選択肢 (JPEG形式)**")
-        food_items = ["bread", "choco_banana", "cheese", "xylitol_gum"]
-        cols = st.columns(4)
-        for i, food in enumerate(food_items):
-            with cols[i]:
-                display_image("quiz/caries/food", food, "")
-        
-        # 飲み物選択肢（JPEG対応）
-        st.markdown("**飲み物選択肢 (JPEG形式)**")
-        drink_items = ["tea", "cola", "orange_juice", "black_coffee", "milk"]
-        cols = st.columns(5)
-        for i, drink in enumerate(drink_items):
-            with cols[i]:
-                display_image("quiz/caries/drink", drink, "")
-        
-        # 歯周病クイズ
-        st.markdown("**歯周病クイズ**")
-        display_image("quiz/periodontitis", "main_image", "")
-        display_image("quiz/periodontitis", "question_1", "")
-        display_image("quiz/periodontitis", "question_2", "")
-        
-        # イベント画像テスト
-        st.subheader("3. イベント画像テスト")
-        event_images = ["self_introduction", "jump", "tooth_loss", "job_experience"]
-        for event_name in event_images:
-            display_image("events", event_name, "")
-        
-        # 定期検診画像テスト
-        st.subheader("4. 定期検診画像テスト")
-        checkup_images = ["main_checkup", "examination", "brushing_instruction", 
-                         "professional_cleaning", "fluoride_treatment", 
-                         "checkup_result", "importance"]
-        for checkup_name in checkup_images:
-            display_image("checkup", checkup_name, "")
-        
-        st.success("すべての画像カテゴリをテストしました。上記で表示されない画像は、対応するファイルが assets/images/ フォルダにアップロードされていません。")
-        
-    except ImportError:
-        st.error("image_helper モジュールが見つかりません")
-    
-    # ナビゲーション
-    st.markdown("---")
-    col1, col2 = st.columns(2)
-    with col1:
-        if st.button("← スタッフ管理に戻る", width='stretch'):
-            navigate_to('staff_management')
-    with col2:
-        if st.button("🏠 受付に戻る", width='stretch'):
-            navigate_to('reception')
 
 # メインアプリケーション
 def main():
@@ -2901,7 +2803,7 @@ def main():
     if 'game_state' in st.session_state:
         game_state = st.session_state.game_state
         print(f"🔍 DEBUG: Current Position = {game_state.get('current_position', 0)}")
-        print(f"� DEBUG: Tooth Coins = {game_state.get('tooth_coins', 10)}")
+        print(f"🔍 DEBUG: Tooth Coins = {game_state.get('tooth_coins', 10)}")
         print(f"🔍 DEBUG: Teeth Count = {game_state.get('teeth_count', 20)}")
     print(f"🔍 DEBUG: Game Board Stage = {st.session_state.get('game_board_stage', 'N/A')}")
     print(f"🔍 DEBUG: Job Roulette State = {st.session_state.get('job_roulette_state', 'N/A')}")
@@ -2938,8 +2840,6 @@ def main():
         show_game_board_page()
     elif st.session_state.current_page == 'caries_quiz':
         show_caries_quiz_page()
-    elif st.session_state.current_page == 'job_experience':
-        show_job_experience_page()
     elif st.session_state.current_page == 'checkup':
         show_checkup_page()
     elif st.session_state.current_page == 'perio_quiz':
@@ -2951,12 +2851,6 @@ def main():
     elif st.session_state.current_page == 'staff_management':
         if staff_mode:
             show_staff_management_page()
-        else:
-            st.warning("このページはスタッフ専用だよ。")
-            navigate_to('reception')
-    elif st.session_state.current_page == 'image_test':
-        if staff_mode:
-            show_image_test_page()
         else:
             st.warning("このページはスタッフ専用だよ。")
             navigate_to('reception')

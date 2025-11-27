@@ -8,6 +8,8 @@ from __future__ import annotations
 from dataclasses import dataclass, asdict
 from typing import Dict, Iterable, List, Optional, Sequence
 import random
+import os
+import json
 
 TOOTH_CHART_VERSION = 3
 
@@ -428,6 +430,294 @@ def get_tooth_label(stage: str, tooth_id: str) -> str:
     return CHILD_LABEL_MAP.get(kind, tooth_id)
 
 
+# 画像マッピング: 歯の種類と状態から画像ファイル名を取得
+TOOTH_IMAGE_MAP = {
+    # Incisors (切歯・犬歯) - 前歯系
+    ('central_incisor', 'healthy'): 'iN',
+    ('central_incisor', 'cavity'): 'iC',
+    ('central_incisor', 'damaged'): 'iC',
+    ('central_incisor', 'treated'): 'iR',
+    ('central_incisor', 'stained'): 'iS',
+    ('central_incisor', 'lost_permanent'): 'iE',
+    ('central_incisor', 'lost_temp'): 'iE',
+    
+    ('lateral_incisor', 'healthy'): 'iN',
+    ('lateral_incisor', 'cavity'): 'iC',
+    ('lateral_incisor', 'damaged'): 'iC',
+    ('lateral_incisor', 'treated'): 'iR',
+    ('lateral_incisor', 'stained'): 'iS',
+    ('lateral_incisor', 'lost_permanent'): 'iE',
+    ('lateral_incisor', 'lost_temp'): 'iE',
+    
+    ('canine', 'healthy'): 'iN',
+    ('canine', 'cavity'): 'iC',
+    ('canine', 'damaged'): 'iC',
+    ('canine', 'treated'): 'iR',
+    ('canine', 'stained'): 'iS',
+    ('canine', 'lost_permanent'): 'iE',
+    ('canine', 'lost_temp'): 'iE',
+    
+    # 乳歯（前歯系）
+    ('primary_central_incisor', 'healthy'): 'iN',
+    ('primary_central_incisor', 'cavity'): 'iC',
+    ('primary_central_incisor', 'damaged'): 'iC',
+    ('primary_central_incisor', 'treated'): 'iR',
+    ('primary_central_incisor', 'stained'): 'iS',
+    ('primary_central_incisor', 'lost_permanent'): 'iE',
+    ('primary_central_incisor', 'lost_temp'): 'iE',
+    
+    ('primary_lateral_incisor', 'healthy'): 'iN',
+    ('primary_lateral_incisor', 'cavity'): 'iC',
+    ('primary_lateral_incisor', 'damaged'): 'iC',
+    ('primary_lateral_incisor', 'treated'): 'iR',
+    ('primary_lateral_incisor', 'stained'): 'iS',
+    ('primary_lateral_incisor', 'lost_permanent'): 'iE',
+    ('primary_lateral_incisor', 'lost_temp'): 'iE',
+    
+    ('primary_canine', 'healthy'): 'iN',
+    ('primary_canine', 'cavity'): 'iC',
+    ('primary_canine', 'damaged'): 'iC',
+    ('primary_canine', 'treated'): 'iR',
+    ('primary_canine', 'stained'): 'iS',
+    ('primary_canine', 'lost_permanent'): 'iE',
+    ('primary_canine', 'lost_temp'): 'iE',
+    
+    # Molars (臼歯) - 奥歯系
+    ('first_premolar', 'healthy'): 'mN',
+    ('first_premolar', 'cavity'): 'mC',
+    ('first_premolar', 'damaged'): 'mC',
+    ('first_premolar', 'treated'): 'mR',
+    ('first_premolar', 'stained'): 'mS',
+    ('first_premolar', 'lost_permanent'): 'mE',
+    ('first_premolar', 'lost_temp'): 'mE',
+    
+    ('second_premolar', 'healthy'): 'mN',
+    ('second_premolar', 'cavity'): 'mC',
+    ('second_premolar', 'damaged'): 'mC',
+    ('second_premolar', 'treated'): 'mR',
+    ('second_premolar', 'stained'): 'mS',
+    ('second_premolar', 'lost_permanent'): 'mE',
+    ('second_premolar', 'lost_temp'): 'mE',
+    
+    ('first_molar', 'healthy'): 'mN',
+    ('first_molar', 'cavity'): 'mC',
+    ('first_molar', 'damaged'): 'mC',
+    ('first_molar', 'treated'): 'mR',
+    ('first_molar', 'stained'): 'mS',
+    ('first_molar', 'lost_permanent'): 'mE',
+    ('first_molar', 'lost_temp'): 'mE',
+    
+    ('second_molar', 'healthy'): 'mN',
+    ('second_molar', 'cavity'): 'mC',
+    ('second_molar', 'damaged'): 'mC',
+    ('second_molar', 'treated'): 'mR',
+    ('second_molar', 'stained'): 'mS',
+    ('second_molar', 'lost_permanent'): 'mE',
+    ('second_molar', 'lost_temp'): 'mE',
+    
+    # 乳歯（臼歯系）
+    ('primary_first_molar', 'healthy'): 'mN',
+    ('primary_first_molar', 'cavity'): 'mC',
+    ('primary_first_molar', 'damaged'): 'mC',
+    ('primary_first_molar', 'treated'): 'mR',
+    ('primary_first_molar', 'stained'): 'mS',
+    ('primary_first_molar', 'lost_permanent'): 'mE',
+    ('primary_first_molar', 'lost_temp'): 'mE',
+    
+    ('primary_second_molar', 'healthy'): 'mN',
+    ('primary_second_molar', 'cavity'): 'mC',
+    ('primary_second_molar', 'damaged'): 'mC',
+    ('primary_second_molar', 'treated'): 'mR',
+    ('primary_second_molar', 'stained'): 'mS',
+    ('primary_second_molar', 'lost_permanent'): 'mE',
+    ('primary_second_molar', 'lost_temp'): 'mE',
+    
+    # 入れ歯
+    ('prosthetic', 'prosthetic'): 'mN',
+}
+
+
+def get_tooth_image(tooth_kind: str, tooth_status: str) -> str:
+    """歯の種類と状態から画像ファイル名を取得"""
+    return TOOTH_IMAGE_MAP.get((tooth_kind, tooth_status), 'mN')
+
+
 def get_tooth_short_label(stage: str, tooth_id: str) -> str:
     label = get_tooth_label(stage, tooth_id)
     return SHORT_LABEL_MAP.get(label, label)
+
+
+def load_teeth_json() -> dict:
+    """data/teeth.jsonを読み込む"""
+    import json
+    teeth_file = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'data', 'teeth.json')
+    if os.path.exists(teeth_file):
+        with open(teeth_file, 'r', encoding='utf-8') as f:
+            return json.load(f)
+    # デフォルト（全て正常）
+    return {
+        "UR": {str(i): "N" for i in range(1, 8)},
+        "UL": {str(i): "N" for i in range(1, 8)},
+        "LL": {str(i): "N" for i in range(1, 8)},
+        "LR": {str(i): "N" for i in range(1, 8)},
+    }
+
+
+def save_teeth_json(teeth_data: dict):
+    """data/teeth.jsonに保存"""
+    import json
+    teeth_file = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'data', 'teeth.json')
+    with open(teeth_file, 'w', encoding='utf-8') as f:
+        json.dump(teeth_data, f, ensure_ascii=False, indent=2)
+
+
+def get_tooth_image_filename(section: str, number: int, status: str) -> str:
+    """
+    歯の画像ファイル名を取得
+    section: UR, UL, LL, LR
+    number: 1-7
+    status: N, C, R, S, E
+    """
+    # 1-3は前歯(incisor), 4-7は臼歯(molar)
+    prefix = "i" if number <= 3 else "m"
+    return f"{prefix}{status}.png"
+
+
+def update_tooth_status(section: str, number: int, status: str):
+    """
+    特定の歯の状態を更新
+    section: UR, UL, LL, LR
+    number: 1-7
+    status: N(正常), C(むし歯), R(修復), S(茶渋), E(欠損)
+    """
+    teeth_data = load_teeth_json()
+    if section in teeth_data and str(number) in teeth_data[section]:
+        teeth_data[section][str(number)] = status
+        save_teeth_json(teeth_data)
+    return teeth_data
+
+
+def lose_random_tooth():
+    """ランダムに歯を失う（E=欠損）"""
+    import random
+    teeth_data = load_teeth_json()
+    
+    # 正常な歯のリストを作成
+    available_teeth = []
+    for section in ["UR", "UL", "LL", "LR"]:
+        for number in range(1, 8):
+            if teeth_data[section][str(number)] == "N":
+                available_teeth.append((section, number))
+    
+    if available_teeth:
+        section, number = random.choice(available_teeth)
+        return update_tooth_status(section, number, "E")
+    
+    return teeth_data
+
+
+def update_tooth_status_random(status: str, count: int = 1):
+    """
+    ランダムに複数の歯の状態を更新
+    status: N, C, R, S, E
+    count: 変更する歯の数
+    """
+    import random
+    teeth_data = load_teeth_json()
+    
+    # 変更可能な歯のリストを作成
+    available_teeth = []
+    for section in ["UR", "UL", "LL", "LR"]:
+        for number in range(1, 8):
+            current_status = teeth_data[section][str(number)]
+            # 欠損していない歯のみを対象
+            if current_status != "E":
+                available_teeth.append((section, number))
+    
+    # ランダムに指定数の歯を選択
+    selected = random.sample(available_teeth, min(count, len(available_teeth)))
+    
+    for section, number in selected:
+        teeth_data[section][str(number)] = status
+    
+    save_teeth_json(teeth_data)
+    return teeth_data
+
+
+def restore_damaged_teeth():
+    """虫歯を治療済みに変更（C→R）"""
+    teeth_data = load_teeth_json()
+    
+    for section in ["UR", "UL", "LL", "LR"]:
+        for number in range(1, 8):
+            if teeth_data[section][str(number)] == "C":
+                teeth_data[section][str(number)] = "R"
+    
+    save_teeth_json(teeth_data)
+    return teeth_data
+
+
+def restore_stained_teeth():
+    """茶渋を除去（S→N）"""
+    teeth_data = load_teeth_json()
+    
+    for section in ["UR", "UL", "LL", "LR"]:
+        for number in range(1, 8):
+            if teeth_data[section][str(number)] == "S":
+                teeth_data[section][str(number)] = "N"
+    
+    save_teeth_json(teeth_data)
+    return teeth_data
+
+
+def restore_missing_teeth(count: int = 2):
+    """欠損した歯を修復（E→R）入れ歯など"""
+    import random
+    teeth_data = load_teeth_json()
+    
+    # 欠損している歯のリストを作成
+    missing_teeth = []
+    for section in ["UR", "UL", "LL", "LR"]:
+        for number in range(1, 8):
+            if teeth_data[section][str(number)] == "E":
+                missing_teeth.append((section, number))
+    
+    # ランダムに指定数の歯を選択
+    selected = random.sample(missing_teeth, min(count, len(missing_teeth)))
+    
+    for section, number in selected:
+        teeth_data[section][str(number)] = "R"
+    
+    save_teeth_json(teeth_data)
+    return teeth_data
+
+
+def initialize_child_teeth() -> dict:
+    """子供の歯（乳歯20本）を初期化"""
+    teeth_data = {
+        "UR": {str(i): "N" for i in range(1, 6)},  # 1-5
+        "UL": {str(i): "N" for i in range(1, 6)},
+        "LR": {str(i): "N" for i in range(1, 6)},
+        "LL": {str(i): "N" for i in range(1, 6)},
+    }
+    save_teeth_json(teeth_data)
+    return teeth_data
+
+
+def initialize_adult_teeth() -> dict:
+    """大人の歯（永久歯28本）を初期化"""
+    teeth_data = {
+        "UR": {str(i): "N" for i in range(1, 8)},  # 1-7
+        "UL": {str(i): "N" for i in range(1, 8)},
+        "LR": {str(i): "N" for i in range(1, 8)},
+        "LL": {str(i): "N" for i in range(1, 8)},
+    }
+    save_teeth_json(teeth_data)
+    return teeth_data
+
+
+def transition_to_adult_teeth():
+    """乳歯から永久歯に移行（20本→28本）- 全てリセット"""
+    # 全ての歯を正常（N）でリセット
+    new_teeth = initialize_adult_teeth()
+    return new_teeth

@@ -1202,27 +1202,30 @@ def show_game_board_page():
                 
                 # クーポン表示
                 if recent_feedback.get('coupon_url'):
+                    coupon_url = recent_feedback.get('coupon_url')
                     st.markdown(f"""
                     <div style="text-align: center; margin: 20px 0;">
-                        <a href="{recent_feedback.get('coupon_url')}" target="_blank" style="text-decoration: none;">
-                            <button style="
-                                background-color: #FF4B4B;
-                                color: white;
-                                padding: 15px 32px;
-                                text-align: center;
-                                text-decoration: none;
-                                display: inline-block;
-                                font-size: 16px;
-                                margin: 4px 2px;
-                                cursor: pointer;
-                                border: none;
-                                border-radius: 12px;
-                                box-shadow: 0 4px 8px rgba(0,0,0,0.2);
-                            ">
-                                🎟️ クーポンをつかう
-                            </button>
-                        </a>
-                        <p style="font-size: 0.8em; color: #666;">※新しいタブで開きます</p>
+                        <button onclick="window.open('{coupon_url}', '_blank')" style="
+                            background-color: #FF4B4B;
+                            color: white;
+                            padding: 15px 32px;
+                            text-align: center;
+                            text-decoration: none;
+                            display: inline-block;
+                            font-size: 16px;
+                            margin: 4px 2px;
+                            cursor: pointer;
+                            border: none;
+                            border-radius: 12px;
+                            box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+                            transition: all 0.3s ease;
+                        "
+                        onmouseover="this.style.backgroundColor='#E63946'; this.style.transform='scale(1.05)'"
+                        onmouseout="this.style.backgroundColor='#FF4B4B'; this.style.transform='scale(1)'">
+                            🎟️ クーポンをゲット！
+                        </button>
+                        <p style="font-size: 0.85em; color: #666; margin-top: 10px;">※別のブラウザタブで開きます</p>
+                        <p style="font-size: 0.75em; color: #999;">クーポン取得後、このゲームに戻って続きをお楽しみください</p>
                     </div>
                     """, unsafe_allow_html=True)
 
@@ -2521,6 +2524,15 @@ def show_staff_management_page():
                 del st.session_state[key]
             st.success("データをリセットしました")
             navigate_to('reception')
+            
+        st.markdown("---")
+        
+        if st.button("🏆 ランキングリセット", use_container_width=True):
+            from services.store import clear_leaderboard
+            if clear_leaderboard():
+                st.success("ランキングをリセットしました")
+            else:
+                st.error("ランキングのリセットに失敗しました")
     elif pin:
         st.error("❌ PINコードが正しくありません")
     

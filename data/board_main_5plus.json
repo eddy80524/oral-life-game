@@ -177,7 +177,7 @@
     "desc": "甘いジュースを野菜たっぷりスムージーに変えてみた。クーポンゲット！",
     "image": "board/cell_15",
     "caption": "砂糖不使用、国産野菜・果物たっぷり！子どもに大人気のスムージー\n限定500円オフのクーポンゲットしよう！\n後ほど試食ができます！",
-    "coupon_url": "https://example.com/coupon",
+    "coupon_url": "https://login.account.rakuten.com/sso/authorize?response_type=code&client_id=rakuten_racoupon_web&redirect_uri=https%3A%2F%2Fcoupon.rakuten.co.jp/auth/callback&scope=openid%20profile&state=%2FgetCoupon%3Fgetkey%3DWkNHRi1PMEpCLVZLRVAtQjJWVA--&code_challenge=&code_challenge_method=&x=81&y=21&r10_jid_service_id=c23#/sign_in",
     "audio_id": "smoothie",
     "display_label": "12"
   },

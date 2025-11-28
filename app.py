@@ -407,7 +407,12 @@ def apply_tooth_effects(game_state, landing_cell, feedback):
             ),
         )
         if damaged:
-            tooth_messages.append(('warning', '⚠️ 虫歯ができちゃった…定期検診でなおそう！'))
+            if title == "むし歯治療":
+                # 治療マスの場合は、治療ボタンを表示するフラグをセット
+                tooth_messages.append(('warning', '🦷 むし歯ができちゃった！治療を受けよう！'))
+                st.session_state.needs_caries_treatment = True
+            else:
+                tooth_messages.append(('warning', '⚠️ 虫歯ができちゃった…定期検診でなおそう！'))
             effect_applied = True
         # teeth.jsonも更新
         teeth_service.update_tooth_status_random("C", count=1)
@@ -1330,6 +1335,23 @@ def show_game_board_page():
             elif cell_type == 'event':
                 # 通常のイベントは特別なアクションなし
                 action_taken = False
+
+            # むし歯治療ボタンの表示
+            if st.session_state.get('needs_caries_treatment', False):
+                st.markdown("<div style='height:1vh'></div>", unsafe_allow_html=True)
+                if st.button("🦷 治療を受ける", key="caries_treatment_btn", use_container_width=True, type="primary"):
+                    # 虫歯を治療済みに変更（C → R）
+                    teeth_service.restore_damaged_teeth()
+                    teeth_service.restore_stained_teeth()
+                    st.session_state.teeth_data = teeth_service.load_teeth_json()
+                    
+                    # フラグをクリア
+                    st.session_state.needs_caries_treatment = False
+                    
+                    # 成功メッセージ
+                    st.success("✨ 虫歯の治療が完了しました！")
+                    st.rerun()
+
 
             # cell_15 (next_action='periodontitis_quiz') の場合は、action_taken=Trueでもルーレットを表示
             next_action = current_cell.get('next_action', '')

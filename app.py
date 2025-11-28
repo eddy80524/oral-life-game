@@ -169,37 +169,6 @@ st.markdown("""
         border-radius: 10px;
     }
     
-    /* ヘッダーバッジ */
-    .status-badge {
-        background-color: #FEFCF7;
-        border: 2px solid #4CAF50;
-        border-radius: 10px;
-        padding: 15px;
-        margin: 10px;
-        text-align: center;
-        font-weight: bold;
-    }
-    
-    .teeth-count {
-        background-color: #FFF5E6;
-        color: #d2691e;
-    }
-    
-    .tooth-coins {
-        background-color: #F0FFF0;
-        color: #228b22;
-    }
-    
-    /* カード風デザイン */
-    .game-card {
-        background-color: #FEFCF7;
-        border: 2px solid #E8DCC0;
-        border-radius: 15px;
-        padding: 20px;
-        margin: 10px 0;
-        box-shadow: 0 4px 8px rgba(0,0,0,0.1);
-    }
-    
     /* より確実な背景色適用 */
     html, body, [data-testid="stApp"] {
         background-color: #EFE4D0 !important;
@@ -213,193 +182,6 @@ st.markdown("""
     /* メインエリアの背景 */
     section.main > div {
         background-color: #EFE4D0 !important;
-    }
-    
-    /* 進行バー */
-    .progress-container {
-        background-color: #e0e0e0;
-        border-radius: 15px;
-        height: 35px;
-        margin: 15px 0;
-        overflow: hidden;
-        border: 2px solid #ddd;
-    }
-    
-    .progress-fill {
-        background: linear-gradient(90deg, #4CAF50, #45a049);
-        height: 100%;
-        transition: width: 0.8s ease;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        color: white;
-        font-weight: bold;
-        min-width: 120px;
-        text-shadow: 1px 1px 2px rgba(0,0,0,0.3);
-    }
-    
-    /* モバイル対応 */
-    @media (max-width: 768px) {
-        .progress-container {
-            height: 40px;
-            margin: 10px 0;
-        }
-        
-        .progress-fill {
-            font-size: 0.8rem;
-            min-width: 100px;
-        }
-    }
-    
-    /* タイトル */
-    .main-title {
-        text-align: center;
-        color: #4CAF50;
-        margin-bottom: 20px;
-    }
-    
-    /* シンプルな歯の表示 */
-    .simple-teeth-container {
-        background: linear-gradient(135deg, #FFF8EC, #FFEBD4);
-        border: 3px solid #D6C5A5;
-        border-radius: 24px;
-        padding: 18px 20px 16px;
-        margin: 12px 0;
-        box-shadow: 0 6px 12px rgba(0,0,0,0.12);
-        position: relative;
-    }
-    .simple-teeth-container::after {
-        content: "";
-        position: absolute;
-        top: 16px;
-        bottom: 40px;
-        left: 50%;
-        transform: translateX(-50%);
-        width: 3px;
-        background: linear-gradient(180deg, transparent 0%, #bca88e 15%, #8f775e 50%, #bca88e 85%, transparent 100%);
-        border-radius: 999px;
-        opacity: 0.9;
-    }
-    .simple-teeth-row {
-        display: flex;
-        justify-content: center;
-        gap: 5px;
-        margin: 8px 0;
-    }
-    .simple-tooth-block,
-    .simple-tooth-block-labeled {
-        width: 38px;
-        height: 44px;
-        border-radius: 12px;
-        border: 2px solid #d9cfc1;
-        background: #f6f1e8;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-size: 0.75rem;
-        color: #6b5135;
-        box-shadow: 0 2px 4px rgba(0,0,0,0.08);
-        position: relative;
-    }
-    .simple-tooth-block.is-filled,
-    .simple-tooth-block-labeled.is-filled {
-        background: linear-gradient(180deg, #ffffff, #f3ede2);
-    }
-    .simple-tooth-block.is-missing,
-    .simple-tooth-block-labeled.is-missing {
-        background: linear-gradient(180deg, #fde7e7, #f8d8d8);
-        border-style: dashed;
-        color: #a56464;
-        opacity: 0.75;
-    }
-    .simple-tooth-block-labeled::after {
-        content: attr(data-label);
-        position: absolute;
-        bottom: -1.6rem;
-        left: 50%;
-        transform: translate(-50%, 4px);
-        background: rgba(123, 85, 46, 0.92);
-        color: #fff;
-        font-size: 0.68rem;
-        padding: 3px 7px;
-        border-radius: 10px;
-        white-space: nowrap;
-        opacity: 0;
-        pointer-events: none;
-        transition: opacity 0.15s ease, transform 0.15s ease;
-        box-shadow: 0 3px 6px rgba(0,0,0,0.16);
-    }
-    .simple-tooth-block-labeled:hover::after {
-        opacity: 1;
-        transform: translate(-50%, 0);
-    }
-    .teeth-midline {
-        height: 2px;
-        width: 86%;
-        margin: 0 auto;
-        background: linear-gradient(90deg, transparent 0%, #bca88e 10%, #8f775e 50%, #bca88e 90%, transparent 100%);
-        border-radius: 999px;
-    }
-    .simple-teeth-label {
-        text-align: center;
-        font-weight: bold;
-        color: #7a4e27;
-        margin-top: 6px;
-    }
-    .teeth-count-label {
-        text-align: center;
-        font-size: 1.15em;
-        font-weight: bold;
-        color: #8B4513;
-        margin-top: 12px;
-        text-shadow: 1px 1px 2px rgba(0,0,0,0.1);
-    }
-    
-    .coin-visual-container {
-        background: linear-gradient(135deg, #FFD700, #FFA500);
-        border: 3px solid #FF8C00;
-        border-radius: 20px;
-        padding: 15px;
-        margin: 10px 0;
-        box-shadow: 0 6px 12px rgba(0,0,0,0.15);
-    }
-    
-    .coin-stack {
-        display: flex;
-        flex-wrap: wrap;
-        justify-content: center;
-        gap: 8px;
-        margin: 10px 0;
-    }
-    
-    .coin {
-        width: 40px;
-        height: 40px;
-        background: radial-gradient(circle at 30% 30%, #FFD700, #FFA500);
-        border: 3px solid #B8860B;
-        border-radius: 50%;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-weight: bold;
-        color: #8B4513;
-        font-size: 1.2em;
-        box-shadow: 0 4px 8px rgba(0,0,0,0.2);
-        animation: coinShine 2s infinite;
-    }
-    
-    @keyframes coinShine {
-        0%, 100% { transform: scale(1); }
-        50% { transform: scale(1.05); box-shadow: 0 6px 12px rgba(255, 215, 0, 0.5); }
-    }
-    
-    .coin-count-label {
-        text-align: center;
-        font-size: 1.2em;
-        font-weight: bold;
-        color: #8B4513;
-        margin-top: 10px;
-        text-shadow: 1px 1px 2px rgba(0,0,0,0.1);
     }
     
     /* ルーレットパネル */
@@ -546,17 +328,6 @@ st.markdown("""
         transform: scale(1.05);
     }
     
-    @media (max-width: 768px) {
-        .tooth {
-            width: 24px;
-            height: 30px;
-        }
-        .coin {
-            width: 35px;
-            height: 35px;
-            font-size: 1em;
-        }
-    }
 </style>
 """, unsafe_allow_html=True)
 
@@ -565,18 +336,6 @@ if 'current_page' not in st.session_state:
     load_state_from_url()  # Try to load from URL first
     if 'current_page' not in st.session_state:
         st.session_state.current_page = 'reception'
-
-# ページ進行状況の定義
-PAGE_FLOW = {
-    'reception': {'title': '📋 受付・プロローグ', 'next': 'game_board'},
-    'game_board': {'title': '🎲 ゲームボード', 'next': 'caries_quiz'},
-    'caries_quiz': {'title': '🦷 むし歯クイズ', 'next': 'game_board'},
-    'checkup': {'title': '🏥 定期健診', 'next': 'game_board'},
-    'perio_quiz': {'title': '🦷 歯周病クイズ', 'next': 'goal'},
-    'goal': {'title': '🏁 ゴール・ランキング', 'next': 'line_coloring'},
-    'line_coloring': {'title': '📱 LINE', 'next': 'reception'},
-    'staff_management': {'title': '⚙️ スタッフ管理', 'next': 'reception'}
-}
 
 
 def staff_access_enabled() -> bool:
@@ -721,33 +480,6 @@ def apply_tooth_effects(game_state, landing_cell, feedback):
         teeth_service.restore_damaged_teeth()
         teeth_service.restore_stained_teeth()
         st.session_state.teeth_data = teeth_service.load_teeth_json()
-    if action == 'floss_check':
-        repaired = teeth_service.repair_damaged_teeth(game_state)
-        if repaired:
-            tooth_messages.append(('success', '🧵 フロスで歯が元気になったよ！'))
-            effect_applied = True
-    if action == 'smile_together':
-        cleaned = teeth_service.whiten_teeth(game_state)
-        if cleaned:
-            tooth_messages.append(('success', '😁 きれいな歯茎でにっこり笑顔！'))
-            effect_applied = True
-    if action == 'dice_tooth_loss':
-        from services.game_logic import lose_teeth_and_pay  # 遅延インポートで循環対策
-        outcome = lose_teeth_and_pay()
-        payment = outcome.get('payment', 0)
-        if payment:
-            feedback['coin_messages'].append(('warning', f"💸 治療費として {payment} トゥースしはらったよ。"))
-        lost_ids = outcome.get('lost_tooth_ids', [])
-        dice_roll = outcome.get('dice_roll', 0)
-        teeth_lost = outcome.get('teeth_lost', 0)
-        tooth_messages.append(('warning', f"🎲 サイコロは {dice_roll}！ はを {teeth_lost}本 うしなってしまったよ。"))
-        if lost_ids:
-            tooth_messages.append(('error', f"😢 歯を{len(lost_ids)}本 なくしてしまった…"))
-        feedback['landing_message'] = "🦷 歯をたいせつにしよう！"
-        feedback['landing_tone'] = 'warning'
-        feedback['next_page'] = 'refresh'
-        feedback['next_button_label'] = "ボードにもどる"
-        effect_applied = True
 
     teeth_service.sync_teeth_count(game_state)
     st.session_state.teeth_count = game_state.get('teeth_count', st.session_state.get('teeth_count', 0))
@@ -782,7 +514,6 @@ def show_progress_bar():
     """, unsafe_allow_html=True)
 
 def show_status_header():
-    """ゲーム状態のヘッダー表示（HTML/JSONベース）"""
     if st.session_state.current_page not in ['reception', 'staff_management', 'checkup', 'perio_quiz', 'caries_quiz']:
         if st.session_state.current_page == 'game_board':
             stage = st.session_state.get('game_board_stage', 'board')
@@ -2810,8 +2541,7 @@ def main():
     print(f"🔍 DEBUG: Job Roulette State = {st.session_state.get('job_roulette_state', 'N/A')}")
     print(f"{'='*60}\n")
     
-    # タイトル表示
-    current_page_info = PAGE_FLOW.get(st.session_state.current_page, {'title': 'お口の人生ゲーム'})
+    # スタッフモード確認
     staff_mode = staff_access_enabled()
 
     if st.session_state.current_page != 'reception':
@@ -2826,10 +2556,9 @@ def main():
             if not caries_intro and st.session_state.current_page not in hide_status_pages:
                 show_status_header()
 
-        # タイトルとプログレスバー
+        # プログレスバー表示
         hide_progress_pages = {'game_board', 'checkup', 'perio_quiz', 'caries_quiz', 'goal', 'line_coloring', 'job_experience'}
         if st.session_state.current_page not in hide_progress_pages and not caries_intro:
-            st.markdown(f"<h1 class='main-title'>{current_page_info['title']}</h1>", unsafe_allow_html=True)
             show_progress_bar()
     
     # 現在のページに応じてコンテンツを表示

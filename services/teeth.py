@@ -650,7 +650,8 @@ def restore_damaged_teeth():
     
     for section in ["UR", "UL", "LL", "LR"]:
         for number in range(1, 8):
-            if teeth_data[section][str(number)] == "C":
+            # 歯が存在する場合のみ処理（子供の歯は1-5のみ）
+            if str(number) in teeth_data.get(section, {}) and teeth_data[section][str(number)] == "C":
                 teeth_data[section][str(number)] = "R"
     
     save_teeth_json(teeth_data)
@@ -663,7 +664,8 @@ def restore_stained_teeth():
     
     for section in ["UR", "UL", "LL", "LR"]:
         for number in range(1, 8):
-            if teeth_data[section][str(number)] == "S":
+            # 歯が存在する場合のみ処理（子供の歯は1-5のみ）
+            if str(number) in teeth_data.get(section, {}) and teeth_data[section][str(number)] == "S":
                 teeth_data[section][str(number)] = "N"
     
     save_teeth_json(teeth_data)
@@ -679,7 +681,8 @@ def restore_missing_teeth(count: int = 2):
     missing_teeth = []
     for section in ["UR", "UL", "LL", "LR"]:
         for number in range(1, 8):
-            if teeth_data[section][str(number)] == "E":
+            # 歯が存在する場合のみ処理（子供の歯は1-5のみ）
+            if str(number) in teeth_data.get(section, {}) and teeth_data[section][str(number)] == "E":
                 missing_teeth.append((section, number))
     
     # ランダムに指定数の歯を選択

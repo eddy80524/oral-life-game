@@ -103,6 +103,39 @@ class FirebaseService:
         except Exception as e:
             print(f"Firebase get leaderboard error: {e}")
             return []
+
+    def clear_leaderboard(self) -> bool:
+        """リーダーボードをクリア（全スコア削除）"""
+        if not self.initialize():
+            return False
+            
+        try:
+            scores_ref = self.db.collection('scores')
+            # バッチ処理で削除（大量データの場合は再帰的削除が必要だが、今回は簡易実装）
+            docs = scores_ref.stream()
+            
+            batch = self.db.batch()
+            count = 0
+            
+            for doc in docs:
+                batch.delete(doc.reference)
+                count += 1
+                
+                # Firestoreのバッチ制限は500件
+                if count >= 400:
+                    batch.commit()
+                    batch = self.db.batch()
+                    count = 0
+            
+            if count > 0:
+                batch.commit()
+                
+            print("✓ Firebase leaderboard cleared")
+            return True
+            
+        except Exception as e:
+            print(f"Firebase clear leaderboard error: {e}")
+            return False
     
     def increment_participant_count(self) -> int:
         """参加者数をインクリメント"""

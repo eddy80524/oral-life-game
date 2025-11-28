@@ -258,14 +258,25 @@ def get_leaderboard(limit: int = 10) -> List[Dict]:
         return []
 
 def clear_leaderboard() -> bool:
-    """リーダーボードをクリア"""
+    """リーダーボードをクリア（Firebaseとローカル両方）"""
+    success = True
+    
+    # Firebaseのクリアを試みる
+    firebase = get_firebase_service()
+    if not firebase.clear_leaderboard():
+        print("⚠ Firebase leaderboard clear failed or skipped")
+        # Firebaseが失敗してもローカルはクリアするが、完全な成功とは言えないかも
+        # しかし、ユーザーの意図としては「消せるだけ消す」なので続行
+    
     try:
         with open(LEADERBOARD_FILE, 'w', encoding='utf-8') as f:
             json.dump([], f, ensure_ascii=False, indent=2)
-        return True
+        print("✓ Local leaderboard cleared")
     except Exception as e:
         st.error(f"リーダーボードクリアエラー: {e}")
-        return False
+        success = False
+        
+    return success
 
 def reset_participant_count() -> bool:
     """参加者数をリセット"""

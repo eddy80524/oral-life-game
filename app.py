@@ -623,14 +623,14 @@ def show_status_header():
         st.markdown(f"""
         <table class="teeth-table">
             <tr>
-                <th colspan="7">右上</th>
-                <th colspan="7">左上</th>
+                <th colspan="7"></th>
+                <th colspan="7"></th>
             </tr>
             {upper_row_html}
             {lower_row_html}
             <tr>
-                <th colspan="7">右下</th>
-                <th colspan="7">左下</th>
+                <th colspan="7"></th>
+                <th colspan="7"></th>
             </tr>
         </table>
         """, unsafe_allow_html=True)
@@ -2533,7 +2533,6 @@ def show_line_coloring_page():
         '>
             <h2 style='margin:0; text-shadow: 1px 1px 2px rgba(0,0,0,0.2);'>🥤 国産野菜・果物スムージー</h2>
             <p style='font-size: 1.2em; font-weight: bold; margin: 10px 0;'>無料プレゼントキャンペーン中！</p>
-            <p style='font-size: 0.9em; opacity: 0.9;'>(ここにバナー画像が入ります: assets/images/event_banner.png)</p>
         </div>
         """, unsafe_allow_html=True)
 

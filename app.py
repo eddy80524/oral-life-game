@@ -1291,6 +1291,35 @@ def show_game_board_page():
                 caption = current_cell.get('caption')
                 if caption:
                     st.markdown(f"<div style='text-align: center; color: #5c4033; margin-top: 1rem; padding: 0 1rem; line-height: 1.6;'>{caption}</div>", unsafe_allow_html=True)
+                
+                # クーポンボタンを表示（現在のセルにcoupon_urlがある場合）
+                if current_cell.get('coupon_url'):
+                    coupon_url = current_cell.get('coupon_url')
+                    st.markdown(f"""
+                    <div style="text-align: center; margin: 20px 0;">
+                        <button onclick="window.open('{coupon_url}', '_blank')" style="
+                            background-color: #FF4B4B;
+                            color: white;
+                            padding: 15px 32px;
+                            text-align: center;
+                            text-decoration: none;
+                            display: inline-block;
+                            font-size: 16px;
+                            margin: 4px 2px;
+                            cursor: pointer;
+                            border: none;
+                            border-radius: 12px;
+                            box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+                            transition: all 0.3s ease;
+                        "
+                        onmouseover="this.style.backgroundColor='#E63946'; this.style.transform='scale(1.05)'"
+                        onmouseout="this.style.backgroundColor='#FF4B4B'; this.style.transform='scale(1)'">
+                            🎟️ クーポンをゲット！
+                        </button>
+                        <p style="font-size: 0.85em; color: #666; margin-top: 10px;">※別のブラウザタブで開きます</p>
+                        <p style="font-size: 0.75em; color: #999;">クーポン取得後、このゲームに戻って続きをお楽しみください</p>
+                    </div>
+                    """, unsafe_allow_html=True)
 
             cell_type = current_cell.get('type', 'normal')
             action_taken = False

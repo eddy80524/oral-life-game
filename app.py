@@ -1207,10 +1207,12 @@ def show_game_board_page():
                 
                 # クーポン表示
                 if recent_feedback.get('coupon_url'):
+                    import streamlit.components.v1 as components
                     coupon_url = recent_feedback.get('coupon_url')
-                    st.markdown(f"""
+                    
+                    components.html(f"""
                     <div style="text-align: center; margin: 20px 0;">
-                        <button onclick="window.open('{coupon_url}', '_blank')" style="
+                        <button id="couponBtn2" style="
                             background-color: #FF4B4B;
                             color: white;
                             padding: 15px 32px;
@@ -1224,15 +1226,27 @@ def show_game_board_page():
                             border-radius: 12px;
                             box-shadow: 0 4px 8px rgba(0,0,0,0.2);
                             transition: all 0.3s ease;
-                        "
-                        onmouseover="this.style.backgroundColor='#E63946'; this.style.transform='scale(1.05)'"
-                        onmouseout="this.style.backgroundColor='#FF4B4B'; this.style.transform='scale(1)'">
+                        ">
                             🎟️ クーポンをゲット！
                         </button>
                         <p style="font-size: 0.85em; color: #666; margin-top: 10px;">※別のブラウザタブで開きます</p>
                         <p style="font-size: 0.75em; color: #999;">クーポン取得後、このゲームに戻って続きをお楽しみください</p>
                     </div>
-                    """, unsafe_allow_html=True)
+                    <script>
+                        document.getElementById('couponBtn2').addEventListener('click', function() {{
+                            window.open('{coupon_url}', '_blank');
+                        }});
+                        
+                        document.getElementById('couponBtn2').addEventListener('mouseover', function() {{
+                            this.style.backgroundColor = '#E63946';
+                            this.style.transform = 'scale(1.05)';
+                        }});
+                        document.getElementById('couponBtn2').addEventListener('mouseout', function() {{
+                            this.style.backgroundColor = '#FF4B4B';
+                            this.style.transform = 'scale(1)';
+                        }});
+                    </script>
+                    """, height=150)
 
             st.session_state.pop('roulette_feedback', None)
             st.session_state.pop('roulette_last_spin_id', None)
@@ -1295,9 +1309,13 @@ def show_game_board_page():
                 # クーポンボタンを表示（現在のセルにcoupon_urlがある場合）
                 if current_cell.get('coupon_url'):
                     coupon_url = current_cell.get('coupon_url')
-                    st.markdown(f"""
+                    
+                    # st.components.v1.htmlを使って確実にJavaScriptを実行
+                    import streamlit.components.v1 as components
+                    
+                    components.html(f"""
                     <div style="text-align: center; margin: 20px 0;">
-                        <button onclick="window.open('{coupon_url}', '_blank')" style="
+                        <button id="couponBtn" style="
                             background-color: #FF4B4B;
                             color: white;
                             padding: 15px 32px;
@@ -1311,15 +1329,28 @@ def show_game_board_page():
                             border-radius: 12px;
                             box-shadow: 0 4px 8px rgba(0,0,0,0.2);
                             transition: all 0.3s ease;
-                        "
-                        onmouseover="this.style.backgroundColor='#E63946'; this.style.transform='scale(1.05)'"
-                        onmouseout="this.style.backgroundColor='#FF4B4B'; this.style.transform='scale(1)'">
+                        ">
                             🎟️ クーポンをゲット！
                         </button>
                         <p style="font-size: 0.85em; color: #666; margin-top: 10px;">※別のブラウザタブで開きます</p>
                         <p style="font-size: 0.75em; color: #999;">クーポン取得後、このゲームに戻って続きをお楽しみください</p>
                     </div>
-                    """, unsafe_allow_html=True)
+                    <script>
+                        document.getElementById('couponBtn').addEventListener('click', function() {{
+                            window.open('{coupon_url}', '_blank');
+                        }});
+                        
+                        // ホバー効果
+                        document.getElementById('couponBtn').addEventListener('mouseover', function() {{
+                            this.style.backgroundColor = '#E63946';
+                            this.style.transform = 'scale(1.05)';
+                        }});
+                        document.getElementById('couponBtn').addEventListener('mouseout', function() {{
+                            this.style.backgroundColor = '#FF4B4B';
+                            this.style.transform = 'scale(1)';
+                        }});
+                    </script>
+                    """, height=150)
 
             cell_type = current_cell.get('type', 'normal')
             action_taken = False

@@ -2320,7 +2320,7 @@ def show_perio_quiz_page():
 
                         if correct_count >= threshold:
                             coins = high_score.get('coins', 5)
-                            position = high_score.get('position', 19)
+                            position = high_score.get('position', 24)
                             message = high_score.get('message', '🌟 よくできました！')
                             
                             game_state['tooth_coins'] += coins
@@ -2329,7 +2329,7 @@ def show_perio_quiz_page():
                             st.balloons()
                         else:
                             coins = low_score.get('coins', -3)
-                            position = low_score.get('position', 17)
+                            position = low_score.get('position', 21)
                             message = low_score.get('message', '💧 もう少し頑張りましょう')
                             
                             game_state['tooth_coins'] = max(0, game_state['tooth_coins'] + coins)

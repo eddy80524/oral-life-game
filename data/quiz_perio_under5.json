@@ -37,7 +37,7 @@
   ],
   "rewards": {
     "high_score": {
-      "threshold": 1,
+      "threshold": 2,
       "coins": 5,
       "position": 24,
       "message": "🌟 すごいね！けんこうルートにすすむよ！"

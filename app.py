@@ -765,7 +765,7 @@ def show_reception_page():
             st.markdown("<h1 class='reception-heading'>おくちのじんせいゲームへようこそ！</h1>", unsafe_allow_html=True)
             render_reception_image("welcome_teeth")
             st.markdown("<p class='reception-text'>みんなには100さいになるまで<br>きれいなおくちですごしてもらうよ！</p>", unsafe_allow_html=True)
-            st.caption("※ 音声ガイドは準備中だよ。")
+            st.caption("※ 広報のために写真撮影をさせていただく場合がございます。あらかじめご了承ください。")
             st.markdown("<div style='height:1vh'></div>", unsafe_allow_html=True)
             if st.button("すすむ", key="reception_next_welcome", use_container_width=True, type="primary"):
                 st.session_state.reception_step = 2
@@ -2160,8 +2160,12 @@ def show_perio_quiz_page():
 
     def render_option_buttons(options, selected, key_prefix):
         state_key = f"{key_prefix}_selected"
-        if selected is None:
+        # セッションステートに値があればそれを優先（クリック直後の反映のため）
+        if state_key in st.session_state:
+            selected = st.session_state[state_key]
+        elif selected is None:
             selected = st.session_state.get(state_key)
+            
         cols = st.columns(len(options))
         updated = selected
         for idx, label in enumerate(options):

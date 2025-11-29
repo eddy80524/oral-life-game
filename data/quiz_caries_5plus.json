@@ -7,7 +7,11 @@
       "image_category": "quiz/caries",
       "image_name": "question_1",
       "type": "single_choice",
-      "options": ["あたま", "せなか", "は"],
+      "options": [
+        "あたま",
+        "せなか",
+        "は"
+      ],
       "correct": 2,
       "explanation": "『は』は からだのなかで いちばんかたいんだよ。エナメルしつが つよいんだ。",
       "correct_feedback": "せいかい！『は』は からだのなかで いちばんかたいんだよ。",
@@ -17,7 +21,11 @@
       "id": "q2",
       "text": "むし歯のバイキンは、なにを食べて大きくなる？",
       "type": "single_choice",
-      "options": ["すっぱいもの", "あまいもの", "しおからいもの"],
+      "options": [
+        "すっぱいもの",
+        "あまいもの",
+        "しおからいもの"
+      ],
       "correct": 1,
       "explanation": "みんながおかしやジュースを食べると、その食べかすが歯にくっつきます。むし歯バイキンは、この食べかすの中に含まれているさとうをパクパク食べて大きくなるんだ。",
       "correct_feedback": "正解！むし歯バイキンは、さとう（あまいもの）を食べて大きくなるよ。",
@@ -28,12 +36,12 @@
     "high_score": {
       "threshold": 1,
       "coins": 0,
-      "position": 8,
+      "position": 11,
       "message": "🌟 すごい！フロスができるコースにすすみます！"
     },
     "low_score": {
       "coins": 0,
-      "position": 6,
+      "position": 8,
       "message": "💧 もう少し気をつけよう。むし歯ルートにすすみます。"
     }
   }

@@ -7,7 +7,11 @@
       "image_category": "quiz/caries",
       "image_name": "question_1",
       "type": "single_choice",
-      "options": ["あたま", "せなか", "は"],
+      "options": [
+        "あたま",
+        "せなか",
+        "は"
+      ],
       "correct": 2,
       "explanation": "『は』は からだのなかで いちばんかたいんだよ。エナメルしつが つよいんだ。",
       "correct_feedback": "せいかい！『は』は からだのなかで いちばんかたいんだよ。",
@@ -19,7 +23,11 @@
       "image_category": "quiz/caries",
       "image_name": "question_2",
       "type": "single_choice",
-      "options": ["むし歯になりやすい", "背がのびる", "歯がつよくなる"],
+      "options": [
+        "むし歯になりやすい",
+        "背がのびる",
+        "歯がつよくなる"
+      ],
       "correct": 0,
       "explanation": "ジュースを飲みすぎると、お口の中のばい菌が「やったー！」って大よろこび！ むし歯になっちゃうかも。",
       "correct_feedback": "せいかい！ ジュースを飲みすぎると、お口の中のばい菌が「やったー！」って大よろこび！ むし歯になっちゃうかも。",
@@ -30,12 +38,12 @@
     "high_score": {
       "threshold": 1,
       "coins": 5,
-      "position": 10,
+      "position": 11,
       "message": "🌟 よくできました！ けんこうルートに すすみます！"
     },
     "low_score": {
       "coins": -3,
-      "position": 7,
+      "position": 8,
       "message": "💧 もうすこし きをつけましょう。べつのルートに すすみます。"
     }
   }

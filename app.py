@@ -1710,16 +1710,16 @@ def show_caries_quiz_page():
                         threshold = high_score.get('threshold', 1)
                         
                         if correct_count >= threshold:
-                            coins = high_score.get('coins', 5)
-                            position = 8  # cell 8: フロス習得（正解ルート）
+                            coins = high_score.get('coins', 0)
+                            position = high_score.get('position', 11)  # 正解ルート: cell 11 フロス
                             message = high_score.get('message', '🌟 よくできました！')
                             
                             game_state['tooth_coins'] += coins
                             game_state['current_position'] = position
                             st.success(message)
                         else:
-                            coins = low_score.get('coins', -3)
-                            position = 6  # cell 6: むし歯ができた（不正解ルート）
+                            coins = low_score.get('coins', 0)
+                            position = low_score.get('position', 8)  # 不正解ルート: cell 8 むし歯治療
                             message = low_score.get('message', '💧 もう少し頑張りましょう')
                             
                             game_state['tooth_coins'] = max(0, game_state['tooth_coins'] + coins)

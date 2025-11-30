@@ -629,10 +629,12 @@ def update_tooth_status_random(status: str, count: int = 1):
     available_teeth = []
     for section in ["UR", "UL", "LL", "LR"]:
         for number in range(1, 8):
-            current_status = teeth_data[section][str(number)]
-            # 欠損していない歯のみを対象
-            if current_status != "E":
-                available_teeth.append((section, number))
+            # 歯が存在する場合のみ対象
+            if str(number) in teeth_data.get(section, {}):
+                current_status = teeth_data[section][str(number)]
+                # 欠損していない歯のみを対象
+                if current_status != "E":
+                    available_teeth.append((section, number))
     
     # ランダムに指定数の歯を選択
     selected = random.sample(available_teeth, min(count, len(available_teeth)))

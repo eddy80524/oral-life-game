@@ -953,9 +953,34 @@ def show_game_board_page():
         if distance_to_goal <= 0:
             return [], None, distance_to_goal
 
+        # 現在のセル情報を取得
+        current_cell = None
+        if 0 <= position < len(board_data):
+            current_cell = board_data[position]
+        
+        if current_cell is None:
+            return [], None, distance_to_goal
+        
         max_spin = 3
         max_reachable = min(max_spin, distance_to_goal)
-
+        
+        # 現在のセルタイプを取得
+        cell_type = current_cell.get('type', 'normal')
+        
+        # 分岐ルート(branch_fail or branch_pass)の場合、同じタイプのセルにのみ進める
+        if cell_type in ['branch_fail', 'branch_pass']:
+            allowed = []
+            for offset in range(1, max_reachable + 1):
+                next_pos = position + offset
+                if next_pos >= len(board_data):
+                    break
+                next_cell = board_data[next_pos]
+                # 同じタイプのセルのみ許可
+                if next_cell.get('type') == cell_type:
+                    allowed.append(offset)
+            return allowed, None, distance_to_goal
+        
+        # 通常のセルは既存のロジックを使用
         next_stop_distance = None
         for stop_pos in forced_stop_indices:
             if stop_pos > position:
@@ -1412,17 +1437,31 @@ def show_game_board_page():
                     st.success("✨ 虫歯の治療が完了しました！")
                     st.rerun()
 
-
             # cell_15 (next_action='periodontitis_quiz') の場合は、action_taken=Trueでもルーレットを表示
             next_action = current_cell.get('next_action', '')
             is_completed_checkup = (next_action == 'periodontitis_quiz')
             
-            can_spin = ((not action_taken or is_completed_checkup) 
-                        and cell_type != 'quiz'
-                        and not (cell_type == 'stop' and next_action and next_action != 'periodontitis_quiz')
-                        and current_position < max_position_index)
+            # next_cellが指定されている場合は、そのセルへ自動移動
+            next_cell_id = current_cell.get('next_cell')
+            if next_cell_id is not None and not action_taken:
+                st.markdown("<div style='height:1.5vh'></div>", unsafe_allow_html=True)
+                next_cell_label = get_display_label(next_cell_id)
+                if st.button(f"➡️ {next_cell_label}ばんめのマスへすすむ", use_container_width=True, type="primary"):
+                    # 次のセルへ移動
+                    game_state['current_position'] = next_cell_id
+                    game_state['turn_count'] = game_state.get('turn_count', 0) + 1
+                    st.success(f"➡️ {next_cell_label}ばんめのマスへすすんだよ！")
+                    save_state_to_url()
+                    st.rerun()
+                # next_cellボタンを表示したのでルーレットは表示しない
+                can_spin = False
+            else:
+                can_spin = ((not action_taken or is_completed_checkup) 
+                            and cell_type != 'quiz'
+                            and not (cell_type == 'stop' and next_action and next_action != 'periodontitis_quiz')
+                            and current_position < max_position_index)
             
-            print(f"🔍 DEBUG [can_spin]: action_taken={action_taken}, cell_type='{cell_type}', title='{title}', next_action='{next_action}', can_spin={can_spin}")
+            print(f"🔍 DEBUG [can_spin]: action_taken={action_taken}, cell_type='{cell_type}', title='{title}', next_action='{next_action}', next_cell={next_cell_id}, can_spin={can_spin}")
 
             if can_spin:
                 allowed_numbers, _, _ = compute_allowed_numbers(current_position)
@@ -1577,8 +1616,12 @@ def show_caries_quiz_page():
 
         def render_option_buttons(options, selected, key_prefix):
             state_key = f"{key_prefix}_selected"
-            if selected is None:
+            # セッションステートから最新の選択を読み込む（既に選択されている場合は優先）
+            if state_key in st.session_state:
+                selected = st.session_state[state_key]
+            elif selected is None:
                 selected = st.session_state.get(state_key)
+            
             cols = st.columns(len(options))
             updated = selected
             for idx, label in enumerate(options):
@@ -1743,7 +1786,8 @@ def show_caries_quiz_page():
                             st.session_state.post_quiz_full_teeth = True
                             st.balloons()
                         
-                        # クイズ完了後はaction_takenをFalseにして、分岐マスでルーレットを表示できるようにする
+                        # クイズ完了後は分岐マスでルーレットを表示できるようにする
+                        # 分岐ルート制限はcompute_allowed_numbersで実装されている
                         game_state['action_taken'] = False
                         game_state['action_completed'] = False
                     

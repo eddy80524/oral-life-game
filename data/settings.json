@@ -1,4 +1,18 @@
 {
   "staff_pin": "0418",
-  "current_board": "5plus"
+  "current_board": "5plus",
+  "debug_mode": false,
+  "game": {
+    "job_experience_timer_seconds": 300,
+    "rewards": {
+      "job_complete_on_time": 10,
+      "job_complete_late": 5,
+      "job_force_complete": 10
+    },
+    "initial": {
+      "tooth_coins": 10,
+      "teeth_count_child": 20,
+      "teeth_count_adult": 28
+    }
+  }
 }

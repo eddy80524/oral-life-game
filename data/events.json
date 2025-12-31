@@ -1,0 +1,19 @@
+{
+  "events": [
+    {
+      "id": "default",
+      "name": "デフォルト",
+      "description": "通常設定",
+      "board_file": "board_main.json",
+      "pin": "0418"
+    },
+    {
+      "id": "saitama_0131",
+      "name": "埼玉イベント (1/31)",
+      "description": "2025年1月31日 埼玉イベント用ボード",
+      "board_file": "board_saitama.json",
+      "pin": "0131"
+    }
+  ],
+  "active_event": "saitama_0131"
+}

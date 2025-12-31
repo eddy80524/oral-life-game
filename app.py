@@ -22,6 +22,20 @@ from services.quiz_helper import load_quiz_data  # noqa: E402
 from services.store import log_player_session  # noqa: E402
 from services.image_helper import get_image_path  # noqa: E402
 
+# pagesモジュールから関数をインポート
+from pages import (
+    show_reception_page,
+    show_caries_quiz_page,
+    show_perio_quiz_page,
+    show_job_experience_page,
+    auto_complete_job_experience,
+    show_checkup_page,
+    show_goal_page,
+    show_line_coloring_page,
+    show_staff_management_page,
+)
+from pages.utils import navigate_to, load_settings, debug_log, load_events_config, save_active_event, get_board_file_for_age
+
 ensure_video_directories()
 
 # -----------------------------------------------------------------------------
@@ -114,6 +128,7 @@ def load_state_from_url():
 
     except Exception as e:
         print(f"Error loading state from URL: {e}")
+
 
 
 # ページ設定
@@ -535,8 +550,9 @@ def show_status_header():
         
         teeth_data = st.session_state.teeth_data
         
+        @st.cache_data(ttl=3600)  # Cache for 1 hour
         def get_tooth_image_base64(image_name: str) -> str:
-            """歯の画像をBase64エンコード"""
+            """歯の画像をBase64エンコード（キャッシュ付き）"""
             image_path = get_image_path("teeth", image_name)
             
             if image_path and os.path.exists(image_path):
@@ -561,6 +577,7 @@ def show_status_header():
             height: 50px;
             margin: 0;
             padding: 0;
+            line-height: 0;
         }
         .teeth-table th {
             background-color: #f59696;
@@ -570,8 +587,9 @@ def show_status_header():
         }
         .teeth-table img {
             vertical-align: bottom;
-            height: 40px;
-            width: auto;
+            width: 100%;
+            height: auto;
+            display: block;
         }
         .upper-teeth img {
             vertical-align: top;
@@ -762,7 +780,7 @@ def show_reception_page():
                 st.rerun()
 
         elif step == 1:
-            st.markdown("<h1 class='reception-heading'>おくちのじんせいゲームへようこそ！</h1>", unsafe_allow_html=True)
+            st.markdown("<h1 class='reception-heading'>おくちのテーマパークへようこそ！</h1>", unsafe_allow_html=True)
             render_reception_image("welcome_teeth")
             st.markdown("<p class='reception-text'>みんなには100さいになるまで<br>きれいなおくちですごしてもらうよ！</p>", unsafe_allow_html=True)
             st.caption("※ 広報のために写真撮影をさせていただく場合がございます。あらかじめご了承ください。")
@@ -841,7 +859,23 @@ def show_reception_page():
                 if st.button("スタッフ確認", key="reception_wait_check", type="secondary"):
                     settings = get_settings()
                     staff_pin = settings.get("staff_pin", "0418")
-                    if pin == str(staff_pin):
+                    
+                    # イベントPINをチェック
+                    events_data = load_events_config()
+                    events = events_data.get("events", [])
+                    matched_event = None
+                    for event in events:
+                        if event.get("pin") == pin:
+                            matched_event = event
+                            break
+                    
+                    if matched_event:
+                        # イベントPINで認証成功 → そのイベントに切り替え
+                        save_active_event(matched_event["id"])
+                        st.session_state.reception_wait_unlocked = True
+                        st.success(f"✅「{matched_event['name']}」で準備完了！")
+                    elif pin == str(staff_pin):
+                        # 管理者PINで認証成功
                         st.session_state.reception_wait_unlocked = True
                         st.success("スタートの準備ができました！")
                     else:
@@ -881,7 +915,7 @@ def show_game_board_page():
     # ヘルパー関数の定義（使用前に定義）
     def compute_allowed_numbers_for_action(position: int, game_state: dict):
         """アクション完了後の次のマス計算"""
-        board_file = f"data/board_main_{'under5' if st.session_state.participant_age < 5 else '5plus'}.json"
+        board_file = get_board_file_for_age(st.session_state.participant_age)
         try:
             with open(board_file, 'r', encoding='utf-8') as f:
                 board_data = json.load(f)
@@ -891,7 +925,8 @@ def show_game_board_page():
                 return []
             max_reachable = min(3, distance_to_goal)
             return list(range(1, max_reachable + 1))
-        except:
+        except Exception as e:
+            debug_log(f"🔍 DEBUG [compute_allowed_numbers]: Error loading board - {e}")
             return [1, 2, 3]
 
     def ensure_post_quiz_full_teeth():
@@ -923,8 +958,7 @@ def show_game_board_page():
     forced_stop_indices = []
     required_stop_titles = {"虫歯クイズ", "歯周病クイズ", "お仕事体験"}
     try:
-        age_group = "under5" if st.session_state.participant_age < 5 else "5plus"
-        board_file = f"data/board_main_{age_group}.json"
+        board_file = get_board_file_for_age(st.session_state.participant_age)
         with open(board_file, 'r', encoding='utf-8') as f:
             board_data = json.load(f)
         max_position_index = max(len(board_data) - 1, 0)
@@ -1033,7 +1067,14 @@ def show_game_board_page():
     def process_spin_result(result_value: int):
         # 最新の位置を取得
         old_position = st.session_state.game_state.get('current_position', 0)
-        new_position = min(old_position + result_value, max_position_index)
+        
+        # forced_next_cellがセットされている場合は、そのセルに直接移動
+        forced_next = st.session_state.pop('forced_next_cell', None)
+        if forced_next is not None:
+            new_position = forced_next
+        else:
+            new_position = min(old_position + result_value, max_position_index)
+        
         old_label = get_display_label(old_position)
         
         # game_stateを直接更新
@@ -1441,19 +1482,20 @@ def show_game_board_page():
             next_action = current_cell.get('next_action', '')
             is_completed_checkup = (next_action == 'periodontitis_quiz')
             
-            # next_cellが指定されている場合は、そのセルへ自動移動
+            # next_cellが指定されている場合は、ルーレットで1が出るようにして自然に遷移
             next_cell_id = current_cell.get('next_cell')
             if next_cell_id is not None and not action_taken:
                 st.markdown("<div style='height:1.5vh'></div>", unsafe_allow_html=True)
-                next_cell_label = get_display_label(next_cell_id)
-                if st.button(f"➡️ {next_cell_label}ばんめのマスへすすむ", use_container_width=True, type="primary"):
-                    # 次のセルへ移動
-                    game_state['current_position'] = next_cell_id
-                    game_state['turn_count'] = game_state.get('turn_count', 0) + 1
-                    st.success(f"➡️ {next_cell_label}ばんめのマスへすすんだよ！")
-                    save_state_to_url()
+                # ルーレットを表示するが、結果は1に固定（自然な遷移に見せる）
+                if st.button("🎡 ルーレットをまわす", key="board_to_roulette_next", use_container_width=True, type="primary"):
+                    # 結果を1に固定してルーレット画面へ
+                    st.session_state.pending_spin_allowed = [1]  # 1のみ
+                    st.session_state.forced_next_cell = next_cell_id  # 強制遷移先を記録
+                    st.session_state.pop('roulette_spin_state', None)
+                    st.session_state.game_board_stage = 'roulette'
+                    st.session_state.pop('roulette_recent_feedback', None)
                     st.rerun()
-                # next_cellボタンを表示したのでルーレットは表示しない
+                # ルーレットを表示したので通常のcan_spinは無効
                 can_spin = False
             else:
                 can_spin = ((not action_taken or is_completed_checkup) 
@@ -1461,7 +1503,7 @@ def show_game_board_page():
                             and not (cell_type == 'stop' and next_action and next_action != 'periodontitis_quiz')
                             and current_position < max_position_index)
             
-            print(f"🔍 DEBUG [can_spin]: action_taken={action_taken}, cell_type='{cell_type}', title='{title}', next_action='{next_action}', next_cell={next_cell_id}, can_spin={can_spin}")
+            debug_log(f"🔍 DEBUG [can_spin]: action_taken={action_taken}, cell_type='{cell_type}', title='{title}', next_action='{next_action}', next_cell={next_cell_id}, can_spin={can_spin}")
 
             if can_spin:
                 allowed_numbers, _, _ = compute_allowed_numbers(current_position)
@@ -1862,11 +1904,11 @@ def show_job_experience_page():
     
     # ターミナルデバッグ出力
     print(f"\n🔍 DEBUG [job_experience]: roulette_state={roulette_state}, result={result}")
-    print(f"🔍 DEBUG [job_experience]: session_keys={list(st.session_state.keys())}")
+    debug_log(f"🔍 DEBUG [job_experience]: session_keys={list(st.session_state.keys())}")
     
     # ルーレット初期状態
     if roulette_state == 'idle' or roulette_state is None:
-        print(f"🔍 DEBUG [job_experience]: 初期画面表示")
+        debug_log(f"🔍 DEBUG [job_experience]: 初期画面表示")
         
         st.markdown("<p style='text-align:center; font-size:1.2em; color:#5d4037; margin:20px 0;'>どの おしごとに ちょうせんするか ルーレットできめよう！</p>", unsafe_allow_html=True)
         
@@ -1895,17 +1937,17 @@ def show_job_experience_page():
                 """, unsafe_allow_html=True)
         
         st.markdown("<div style='height:2vh'></div>", unsafe_allow_html=True)
-        print(f"🔍 DEBUG [job_experience]: st.columns()でカード表示")
+        debug_log(f"🔍 DEBUG [job_experience]: st.columns()でカード表示")
         
         # ルーレットボタン
         if st.button("🎰 ルーレットをまわす", key="start_job_roulette", use_container_width=True, type="primary"):
-            print(f"🔍 DEBUG [job_experience]: ルーレットボタンクリック")
+            debug_log(f"🔍 DEBUG [job_experience]: ルーレットボタンクリック")
             st.session_state.job_roulette_state = 'spinning'
             st.rerun()
     
     # ルーレット回転中
     elif roulette_state == 'spinning':
-        print(f"🔍 DEBUG [job_experience]: ルーレット回転中")
+        debug_log(f"🔍 DEBUG [job_experience]: ルーレット回転中")
         st.markdown("<p style='text-align:center; font-size:1.2em; color:#ff6b6b;'>🎰 ルーレット ちゅう…</p>", unsafe_allow_html=True)
         
         # プレースホルダー
@@ -1917,7 +1959,7 @@ def show_job_experience_page():
         final_result = random.randint(0, 2)
         animation_sequence.append(final_result)
         
-        print(f"🔍 DEBUG [job_experience]: 最終結果 = {final_result}")
+        debug_log(f"🔍 DEBUG [job_experience]: 最終結果 = {final_result}")
         
         # アニメーション実行
         for active_idx in animation_sequence:
@@ -1954,7 +1996,7 @@ def show_job_experience_page():
         # 結果保存
         st.session_state.job_roulette_result = final_result
         st.session_state.job_roulette_state = 'result'
-        print(f"🔍 DEBUG [job_experience]: ルーレット完了")
+        debug_log(f"🔍 DEBUG [job_experience]: ルーレット完了")
         st.rerun()
     
     # 結果表示
@@ -1996,7 +2038,7 @@ def show_job_experience_page():
                 """, unsafe_allow_html=True)
         
         st.markdown("<div style='height:2vh'></div>", unsafe_allow_html=True)
-        print(f"🔍 DEBUG [job_experience]: 結果表示 - st.columns()使用")
+        debug_log(f"🔍 DEBUG [job_experience]: 結果表示 - st.columns()使用")
         st.info(f"これから {selected_job['name']}の おしごとを たいけんするよ！")
         
         # タイマー表示（5分）
@@ -2119,7 +2161,7 @@ def show_checkup_page():
         try:
             game_state = st.session_state.get('game_state', {})
             age = st.session_state.get('participant_age', 5)
-            board_file = f"data/board_main_{'under5' if age < 5 else '5plus'}.json"
+            board_file = get_board_file_for_age(age)
             board_path = os.path.join(os.getcwd(), board_file)
             with open(board_path, 'r', encoding='utf-8') as f:
                 board_data = json.load(f)
@@ -2474,6 +2516,7 @@ def show_goal_page():
         if not st.session_state.get('score_saved'):
             player_data = {
                 "player_name": st.session_state.get('participant_name', '匿名'),
+                "participant_age": st.session_state.get('participant_age', 5),
                 "age_group": "under5" if st.session_state.get('participant_age', 5) < 5 else "5plus",
                 "teeth_count": teeth_count,
                 "tooth_coins": coins,
@@ -2561,28 +2604,34 @@ def show_goal_page():
 
 def show_line_coloring_page():
     """LINE・ぬりえページ"""
-    st.markdown("### 🎁 イベント・プレゼント")
+    # イベント設定を確認
+    events_data = load_events_config()
+    active_event_id = events_data.get("active_event", "default")
     
-    # 1. Smoothie Banner
-    banner_path = "assets/images/event_banner.png"
-    if os.path.exists(banner_path):
-        st.image(banner_path, use_column_width=True)
-    else:
-        # Placeholder if image doesn't exist
-        st.markdown("""
-        <div style='
-            background: linear-gradient(135deg, #ff9a9e 0%, #fecfef 99%, #fecfef 100%);
-            border-radius: 15px;
-            padding: 30px;
-            text-align: center;
-            margin-bottom: 20px;
-            color: #fff;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
-        '>
-            <h2 style='margin:0; text-shadow: 1px 1px 2px rgba(0,0,0,0.2);'>🥤 国産野菜・果物スムージー</h2>
-            <p style='font-size: 1.2em; font-weight: bold; margin: 10px 0;'>無料プレゼントキャンペーン中！</p>
-        </div>
-        """, unsafe_allow_html=True)
+    # 埼玉イベント以外の場合のみスムージープレゼントを表示
+    if active_event_id != "saitama_0131":
+        st.markdown("### 🎁 イベント・プレゼント")
+        
+        # 1. Smoothie Banner
+        banner_path = "assets/images/event_banner.png"
+        if os.path.exists(banner_path):
+            st.image(banner_path, use_column_width=True)
+        else:
+            # Placeholder if image doesn't exist
+            st.markdown("""
+            <div style='
+                background: linear-gradient(135deg, #ff9a9e 0%, #fecfef 99%, #fecfef 100%);
+                border-radius: 15px;
+                padding: 30px;
+                text-align: center;
+                margin-bottom: 20px;
+                color: #fff;
+                box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            '>
+                <h2 style='margin:0; text-shadow: 1px 1px 2px rgba(0,0,0,0.2);'>🥤 国産野菜・果物スムージー</h2>
+                <p style='font-size: 1.2em; font-weight: bold; margin: 10px 0;'>無料プレゼントキャンペーン中！</p>
+            </div>
+            """, unsafe_allow_html=True)
 
     st.markdown("### 📱 公式SNSをフォローしよう！")
     st.info("お得な情報やイベントのお知らせをお届けします！")
@@ -2642,11 +2691,60 @@ def show_staff_management_page():
     """スタッフ管理ページ"""
     st.markdown("### ⚙️ スタッフ管理")
     
+    # PINを設定ファイルから読み込み
+    try:
+        with open('data/settings.json', 'r', encoding='utf-8') as f:
+            settings = json.load(f)
+        staff_pin = settings.get("staff_pin", "0418")
+    except Exception as e:
+        debug_log(f"🔍 DEBUG [staff_management]: Error loading settings - {e}")
+        staff_pin = "0418"
+    
     # PIN認証
     pin = st.text_input("PINコード", type="password")
     
-    if pin == "0418":
+    if pin == staff_pin:
         st.success("✅ 認証成功")
+        
+        # イベント設定セクション
+        st.markdown("---")
+        st.markdown("#### 📅 イベント設定")
+        
+        # イベント設定を読み込み
+        events_data = load_events_config()
+        events = events_data.get("events", [])
+        active_event_id = events_data.get("active_event", "default")
+        
+        # イベント選択
+        event_names = [e["name"] for e in events]
+        event_ids = [e["id"] for e in events]
+        
+        current_index = 0
+        if active_event_id in event_ids:
+            current_index = event_ids.index(active_event_id)
+        
+        selected_name = st.selectbox(
+            "使用するイベント",
+            event_names,
+            index=current_index
+        )
+        
+        selected_index = event_names.index(selected_name)
+        selected_event = events[selected_index]
+        
+        # 選択したイベントの詳細表示
+        st.info(f"📋 {selected_event.get('description', '')}")
+        st.text(f"ボードファイル: {selected_event.get('board_file', 'board_main.json')}")
+        
+        # イベント変更ボタン
+        if selected_event["id"] != active_event_id:
+            if st.button("✅ このイベントに変更", use_container_width=True):
+                save_active_event(selected_event["id"])
+                st.success(f"イベントを「{selected_name}」に変更しました！")
+                st.rerun()
+        
+        st.markdown("---")
+        st.markdown("#### 🛠️ データ管理")
         
         if st.button("🗑️ 全データリセット", use_container_width=True):
             for key in list(st.session_state.keys()):
@@ -2670,17 +2768,17 @@ def show_staff_management_page():
 
 # メインアプリケーション
 def main():
-    # ターミナルデバッグ出力
-    print(f"\n{'='*60}")
-    print(f"🔍 DEBUG: Current Page = {st.session_state.current_page}")
+    # ターミナルデバッグ出力（debug_modeが有効な場合のみ）
+    debug_log(f"\n{'='*60}")
+    debug_log(f"🔍 DEBUG: Current Page = {st.session_state.current_page}")
     if 'game_state' in st.session_state:
         game_state = st.session_state.game_state
-        print(f"🔍 DEBUG: Current Position = {game_state.get('current_position', 0)}")
-        print(f"🔍 DEBUG: Tooth Coins = {game_state.get('tooth_coins', 10)}")
-        print(f"🔍 DEBUG: Teeth Count = {game_state.get('teeth_count', 20)}")
-    print(f"🔍 DEBUG: Game Board Stage = {st.session_state.get('game_board_stage', 'N/A')}")
-    print(f"🔍 DEBUG: Job Roulette State = {st.session_state.get('job_roulette_state', 'N/A')}")
-    print(f"{'='*60}\n")
+        debug_log(f"🔍 DEBUG: Current Position = {game_state.get('current_position', 0)}")
+        debug_log(f"🔍 DEBUG: Tooth Coins = {game_state.get('tooth_coins', 10)}")
+        debug_log(f"🔍 DEBUG: Teeth Count = {game_state.get('teeth_count', 20)}")
+    debug_log(f"🔍 DEBUG: Game Board Stage = {st.session_state.get('game_board_stage', 'N/A')}")
+    debug_log(f"🔍 DEBUG: Job Roulette State = {st.session_state.get('job_roulette_state', 'N/A')}")
+    debug_log(f"{'='*60}\n")
     
     # スタッフモード確認
     staff_mode = staff_access_enabled()

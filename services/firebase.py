@@ -63,6 +63,7 @@ class FirebaseService:
             # Firestoreに保存するデータ
             doc_data = {
                 "player_name": player_data.get("player_name", "匿名"),
+                "participant_age": player_data.get("participant_age"),
                 "age_group": player_data.get("age_group", ""),
                 "teeth_count": player_data.get("teeth_count", 0),
                 "tooth_coins": player_data.get("tooth_coins", 0),
